@@ -5,6 +5,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import com.grullondev.firstapp.data.repository.InMemoryChatRepository
+import com.grullondev.firstapp.data.repository.MockPermissionManager
 import com.grullondev.firstapp.presentation.ui.ChatListScreen
 import com.grullondev.firstapp.presentation.ui.ChatScreen
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
@@ -14,7 +15,8 @@ import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 fun App() {
     // En una aplicación real, esto se manejaría con Inyección de Dependencias (ej. Koin)
     val repository = remember { InMemoryChatRepository() }
-    val viewModel = remember { ChatViewModel(repository) }
+    val permissionManager = remember { MockPermissionManager() }
+    val viewModel = remember { ChatViewModel(repository, permissionManager) }
     val selectedChatId by viewModel.selectedChatId.collectAsState()
 
     MaterialTheme(

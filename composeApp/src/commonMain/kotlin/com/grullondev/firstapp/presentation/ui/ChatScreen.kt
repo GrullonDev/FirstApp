@@ -29,66 +29,91 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val themeColor by viewModel.themeColor.collectAsState()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { 
-                    selectedChat?.let { chat ->
-                        ChatHeader(name = chat.name, status = "En línea") 
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { viewModel.onBackPress() }) {
-                        Text("←", fontSize = 24.sp, color = Color.White)
-                    }
-                },
-                actions = {
-                    Text("📹", modifier = Modifier.padding(horizontal = 8.dp), fontSize = 20.sp)
-                    Text("📞", modifier = Modifier.padding(horizontal = 8.dp), fontSize = 20.sp)
-                    Text("⋮", modifier = Modifier.padding(horizontal = 8.dp), fontSize = 24.sp)
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (isLiquidGlassEnabled) themeColor.copy(alpha = 0.8f) else themeColor,
-                    titleContentColor = Color.White,
-                    actionIconContentColor = Color.White
+    var showCameraSim by remember { mutableStateOf(false) }
+
+    if (showCameraSim) {
+        CameraSimulation(
+            onClose = { showCameraSim = false },
+            onCapture = { 
+                viewModel.sendMedia(MessageType.IMAGE)
+                showCameraSim = false
+            },
+            themeColor = themeColor
+        )
+    } else {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { 
+                        selectedChat?.let { chat ->
+                            ChatHeader(name = chat.name, status = "En línea") 
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.onBackPress() }) {
+                            Text("←", fontSize = 24.sp, color = Color.White)
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showCameraSim = true }) {
+                            Text("📹", fontSize = 20.sp, color = Color.White)
+                        }
+                        IconButton(onClick = { /* Llamada */ }) {
+                            Text("📞", fontSize = 20.sp, color = Color.White)
+                        }
+                        IconButton(onClick = { /* Menú */ }) {
+                            Text("⋮", fontSize = 24.sp, color = Color.White)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = if (isLiquidGlassEnabled) themeColor.copy(alpha = 0.8f) else themeColor,
+                        titleContentColor = Color.White,
+                        actionIconContentColor = Color.White
+                    )
                 )
-            )
-        },
-        bottomBar = {
-            ChatInput(
-                text = inputText,
-                onTextChange = { viewModel.onTextChanged(it) },
-                onSendMessage = { viewModel.sendMessage() },
-                onSendMedia = { type, name -> viewModel.sendMedia(type, name) },
-                themeColor = themeColor
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(if (isLiquidGlassEnabled) Color.Transparent else Color(0xFFE5DDD5))
-        ) {
-            if (isLiquidGlassEnabled) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(themeColor.copy(alpha = 0.2f), Color.White)
-                            )
-                        )
+            },
+            bottomBar = {
+                ChatInput(
+                    text = inputText,
+                    onTextChange = { viewModel.onTextChanged(it) },
+                    onSendMessage = { viewModel.sendMessage() },
+                    onSendMedia = { type, name -> 
+                        if (type == MessageType.IMAGE && name == "camera") {
+                            showCameraSim = true
+                        } else {
+                            viewModel.sendMedia(type, name)
+                        }
+                    },
+                    themeColor = themeColor
                 )
             }
-            
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) { paddingValues ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(if (isLiquidGlassEnabled) Color.Transparent else Color(0xFFE5DDD5))
             ) {
-                items(messages, key = { it.id }) { message ->
-                    MessageBubble(message, themeColor, isLiquidGlassEnabled)
+                if (isLiquidGlassEnabled) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                androidx.compose.ui.graphics.Brush.verticalGradient(
+                                    colors = listOf(themeColor.copy(alpha = 0.2f), Color.White)
+                                )
+                            )
+                    )
+                }
+                
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(messages, key = { it.id }) { message ->
+                        MessageBubble(message, themeColor, isLiquidGlassEnabled)
+                    }
                 }
             }
         }
@@ -405,6 +430,7 @@ fun MediaMenu(onAction: (MessageType, String?) -> Unit, themeColor: Color) {
             horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
             MediaOption(icon = "🖼️", label = "Galería", onClick = { onAction(MessageType.IMAGE, null) }, color = Color(0xFF9C27B0))
+            MediaOption(icon = "📷", label = "Cámara", onClick = { onAction(MessageType.IMAGE, "camera") }, color = Color(0xFFE91E63))
             MediaOption(icon = "📄", label = "Documento", onClick = { onAction(MessageType.FILE, "documento.pdf") }, color = Color(0xFF2196F3))
             MediaOption(icon = "🎵", label = "Audio", onClick = { onAction(MessageType.AUDIO, null) }, color = Color(0xFFFF9800))
         }

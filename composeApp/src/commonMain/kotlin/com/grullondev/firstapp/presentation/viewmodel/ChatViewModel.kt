@@ -3,15 +3,17 @@ package com.grullondev.firstapp.presentation.viewmodel
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.grullondev.firstapp.domain.model.Chat
-import com.grullondev.firstapp.domain.model.ChatMessage
-import com.grullondev.firstapp.domain.model.MessageType
+import com.grullondev.firstapp.domain.model.*
 import com.grullondev.firstapp.domain.repository.ChatRepository
+import com.grullondev.firstapp.domain.repository.PermissionManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-class ChatViewModel(private val repository: ChatRepository) : ViewModel() {
+class ChatViewModel(
+    private val repository: ChatRepository,
+    private val permissionManager: PermissionManager
+) : ViewModel() {
 
     val chats: StateFlow<List<Chat>> = repository.getChats()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -76,8 +78,22 @@ class ChatViewModel(private val repository: ChatRepository) : ViewModel() {
 
     fun sendMedia(type: MessageType, fileName: String? = null) {
         val chatId = _selectedChatId.value ?: return
+        
+        val permissionRequired = when(type) {
+            MessageType.IMAGE -> Permission.GALLERY
+            MessageType.FILE -> Permission.FILE_STORAGE
+            MessageType.AUDIO -> Permission.RECORD_AUDIO
+            else -> null
+        }
+
         viewModelScope.launch {
-            repository.sendMessage(chatId, "", type, fileName)
+            val isGranted = if (permissionRequired != null) {
+                permissionManager.requestPermission(permissionRequired) == PermissionState.GRANTED
+            } else true
+
+            if (isGranted) {
+                repository.sendMessage(chatId, "", type, fileName)
+            }
         }
     }
 
