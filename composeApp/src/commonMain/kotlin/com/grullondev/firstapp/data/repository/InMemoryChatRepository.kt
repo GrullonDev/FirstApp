@@ -1,7 +1,9 @@
 package com.grullondev.firstapp.data.repository
 
 import com.grullondev.firstapp.domain.model.Chat
+import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.domain.model.ChatMessage
+import com.grullondev.firstapp.domain.model.MessageType
 import com.grullondev.firstapp.domain.repository.ChatRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,11 +14,11 @@ import kotlinx.coroutines.flow.update
 class InMemoryChatRepository : ChatRepository {
     private val _chats = MutableStateFlow(
         listOf(
-            Chat("1", "Juan Perez", "¡Qué genial! KMP es muy potente.", "10:05 AM", 0),
-            Chat("2", "Maria Garcia", "Hola, ¿cómo vas con la app?", "9:30 AM", 2),
-            Chat("3", "Android Devs", "Nueva versión de Compose disponible", "Ayer", 0),
-            Chat("4", "Mama", "No olvides comprar pan", "Ayer", 1),
-            Chat("5", "Trabajo", "Reunión en 10 minutos", "Lunes", 0)
+            Chat("1", "Juan Perez", "¡Qué genial! KMP es muy potente.", "10:05 AM", 0, type = ChatType.INDIVIDUAL),
+            Chat("2", "Maria Garcia", "Hola, ¿cómo vas con la app?", "9:30 AM", 2, type = ChatType.INDIVIDUAL),
+            Chat("3", "Comunidad KMP", "Nueva versión de Compose disponible", "Ayer", 0, type = ChatType.TOPIC),
+            Chat("4", "Familia Rodriguez", "No olvides comprar pan", "Ayer", 1, type = ChatType.FAMILY),
+            Chat("5", "Proyecto App", "Reunión en 10 minutos para revisar el avance.", "10:10 AM", 0, type = ChatType.WORK)
         )
     )
 
@@ -30,6 +32,16 @@ class InMemoryChatRepository : ChatRepository {
             ),
             "2" to listOf(
                 ChatMessage("1", "Hola, ¿cómo vas con la app?", false, "9:30 AM")
+            ),
+            "3" to listOf(
+                ChatMessage("1", "Nueva versión de Compose disponible", false, "Ayer", senderName = "Google Admin")
+            ),
+            "4" to listOf(
+                ChatMessage("1", "No olvides comprar pan", false, "Ayer", senderName = "Mama")
+            ),
+            "5" to listOf(
+                ChatMessage("1", "Hola equipo, tenemos temas pendientes.", false, "10:00 AM", senderName = "Carlos"),
+                ChatMessage("2", "Reunion en 10 minutos para revisar el avance.", false, "10:10 AM", senderName = "Ana")
             )
         )
     )
@@ -39,12 +51,14 @@ class InMemoryChatRepository : ChatRepository {
     override fun getMessages(chatId: String): Flow<List<ChatMessage>> = 
         _messages.asStateFlow().map { it[chatId] ?: emptyList() }
 
-    override suspend fun sendMessage(chatId: String, text: String) {
+    override suspend fun sendMessage(chatId: String, text: String, type: MessageType, fileName: String?) {
         val newMessage = ChatMessage(
             id = (_messages.value[chatId]?.size ?: 0).plus(1).toString(),
             text = text,
             isMine = true,
-            time = "10:06 AM"
+            time = "Ahora",
+            type = type,
+            fileName = fileName
         )
         
         _messages.update { currentMessages ->
@@ -56,7 +70,13 @@ class InMemoryChatRepository : ChatRepository {
         _chats.update { currentChats ->
             currentChats.map { chat ->
                 if (chat.id == chatId) {
-                    chat.copy(lastMessage = text, lastMessageTime = "Ahora")
+                    val lastMsg = when(type) {
+                        MessageType.TEXT -> text
+                        MessageType.IMAGE -> "📷 Imagen"
+                        MessageType.FILE -> "📄 Archivo: $fileName"
+                        MessageType.AUDIO -> "🎤 Audio"
+                    }
+                    chat.copy(lastMessage = lastMsg, lastMessageTime = "Ahora")
                 } else chat
             }
         }
