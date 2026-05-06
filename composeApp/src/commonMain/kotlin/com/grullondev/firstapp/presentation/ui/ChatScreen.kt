@@ -23,16 +23,30 @@ import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 fun ChatScreen(viewModel: ChatViewModel) {
     val messages by viewModel.messages.collectAsState()
     val inputText by viewModel.inputText.collectAsState()
+    val selectedChat by viewModel.selectedChat.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    ChatHeader(name = "Juan Perez", status = "En línea")
+                title = { 
+                    selectedChat?.let { chat ->
+                        ChatHeader(name = chat.name, status = "En línea") 
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = { viewModel.onBackPress() }) {
+                        Text("←", fontSize = 24.sp, color = Color.White)
+                    }
+                },
+                actions = {
+                    Text("📹", modifier = Modifier.padding(horizontal = 8.dp), fontSize = 20.sp)
+                    Text("📞", modifier = Modifier.padding(horizontal = 8.dp), fontSize = 20.sp)
+                    Text("⋮", modifier = Modifier.padding(horizontal = 8.dp), fontSize = 24.sp)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
+                    containerColor = Color(0xFF008069),
+                    titleContentColor = Color.White,
+                    actionIconContentColor = Color.White
                 )
             )
         },
@@ -48,7 +62,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.background)
+                .background(Color(0xFFE5DDD5))
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -77,7 +91,7 @@ fun ChatHeader(name: String, status: String) {
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(name, style = MaterialTheme.typography.titleMedium)
+            Text(name, style = MaterialTheme.typography.titleMedium, color = Color.White)
             Text(status, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
         }
     }
