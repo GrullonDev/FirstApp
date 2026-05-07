@@ -78,6 +78,56 @@ fun ChatListScreen(viewModel: ChatViewModel) {
 }
 
 @Composable
+fun ChatListScreen(viewModel: ChatViewModel) {
+    val selectedTab by viewModel.selectedTab.collectAsState()
+    val themeColor by viewModel.themeColor.collectAsState()
+    val tabs = listOf(
+        "Estado" to "⭕",
+        "Llamadas" to "📞",
+        "Chats" to "💬",
+        "Ajustes" to "⚙️"
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Clone WhatsApp",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeColor,
+                    titleContentColor = Color.White
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                tabs.forEachIndexed { index, tab ->
+                    NavigationBarItem(
+                        selected = selectedTab == index,
+                        onClick = { viewModel.onTabSelected(index) },
+                        icon = { Text(tab.second) },
+                        label = { Text(tab.first) },
+                        alwaysShowLabel = true
+                    )
+                }
+            }
+        }
+    ) { paddingValues ->
+        when (selectedTab) {
+            3 -> Box(modifier = Modifier.padding(paddingValues)) {
+                SettingsTabContent(viewModel)
+            }
+            else -> ChatListContent(viewModel = viewModel, paddingValues = paddingValues)
+        }
+    }
+}
+
+@Composable
 fun ChatListContent(
     viewModel: ChatViewModel,
     paddingValues: PaddingValues
@@ -131,7 +181,8 @@ fun ChatListContent(
                         ChatItem(
                             chat = chat,
                             onClick = { viewModel.onChatSelected(chat.id) },
-                            isLiquidGlass = isLiquidGlassEnabled
+                            isLiquidGlass = isLiquidGlassEnabled,
+                            themeColor = themeColor
                         )
                     }
                 }
@@ -211,7 +262,7 @@ fun SettingsTabContent(viewModel: ChatViewModel) {
         ) {
             item { ProfileSection(themeColor = themeColor) }
             item {
-                SettingsCategoryTitle("Ajustes de chat")
+                SettingsCategoryTitle("Ajustes de chat", themeColor)
                 PersonalizationSection(
                     themeColor = themeColor,
                     isLiquidGlassEnabled = isLiquidGlassEnabled,
@@ -222,7 +273,7 @@ fun SettingsTabContent(viewModel: ChatViewModel) {
                 )
             }
             item {
-                SettingsCategoryTitle("Ajustes")
+                SettingsCategoryTitle("Ajustes", themeColor)
                 SettingsToggleMenuItem("🔔", "Notificaciones y sonidos", if (notificationsEnabled) "Activado" else "Silenciado", notificationsEnabled) { viewModel.toggleNotifications() }
                 SettingsToggleMenuItem("🔐", "Privacidad y seguridad", if (privacyLockEnabled) "Dos pasos, bloqueos" else "Sin bloqueo", privacyLockEnabled) { viewModel.togglePrivacyLock() }
                 SettingsToggleMenuItem("📊", "Datos y almacenamiento", if (saveMediaOnMobileData) "Guardar en datos móviles" else "Solo con Wi‑Fi", saveMediaOnMobileData) { viewModel.toggleSaveMediaOnMobileData() }
@@ -230,7 +281,7 @@ fun SettingsTabContent(viewModel: ChatViewModel) {
                 SettingsActionMenuItem("🌐", "Idioma", selectedLanguage) { viewModel.toggleLanguage() }
             }
             item {
-                SettingsCategoryTitle("Ayuda")
+                SettingsCategoryTitle("Ayuda", themeColor)
                 SettingsActionMenuItem("❓", "Preguntas frecuentes", "Guía rápida")
                 SettingsActionMenuItem("📧", "Soporte técnico", "Contacto")
                 SettingsActionMenuItem("🌟", "Clone Premium", "Prueba gratis", themeColor)
@@ -261,12 +312,12 @@ fun ProfileSection(themeColor: Color) {
 }
 
 @Composable
-fun SettingsCategoryTitle(title: String) {
+fun SettingsCategoryTitle(title: String, themeColor: Color) {
     Text(
         text = title,
         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
         style = MaterialTheme.typography.labelLarge,
-        color = Color(0xFF2196F3),
+        color = themeColor,
         fontWeight = FontWeight.Bold
     )
 }
@@ -396,7 +447,7 @@ fun SkeletonChatItem(isLiquidGlass: Boolean) {
 }
 
 @Composable
-fun ChatItem(chat: Chat, onClick: () -> Unit, isLiquidGlass: Boolean = false) {
+fun ChatItem(chat: Chat, onClick: () -> Unit, isLiquidGlass: Boolean = false, themeColor: Color) {
     Surface(
         color = if (isLiquidGlass) MaterialTheme.colorScheme.surface.copy(alpha = 0.3f) else Color.Transparent, 
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp).let { if (isLiquidGlass) it.clip(RoundedCornerShape(12.dp)) else it }, 
@@ -418,12 +469,12 @@ fun ChatItem(chat: Chat, onClick: () -> Unit, isLiquidGlass: Boolean = false) {
                             }
                         }
                     }
-                    Text(text = chat.lastMessageTime, style = MaterialTheme.typography.bodySmall, color = if (chat.unreadCount > 0) Color(0xFF00A884) else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = chat.lastMessageTime, style = MaterialTheme.typography.bodySmall, color = if (chat.unreadCount > 0) themeColor else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(text = chat.lastMessage, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     if (chat.unreadCount > 0) {
-                        Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(Color(0xFF00A884)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(themeColor), contentAlignment = Alignment.Center) {
                             Text(text = chat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
