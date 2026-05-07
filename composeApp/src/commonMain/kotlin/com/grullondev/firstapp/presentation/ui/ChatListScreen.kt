@@ -24,6 +24,51 @@ import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 
 @Composable
+fun ChatListScreen(viewModel: ChatViewModel) {
+    val selectedTab by viewModel.selectedTab.collectAsState()
+    val themeColor by viewModel.themeColor.collectAsState()
+    val tabs = listOf("Estado", "Llamadas", "Chats", "Ajustes")
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Clone WhatsApp",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeColor,
+                    titleContentColor = Color.White
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                tabs.forEachIndexed { index, label ->
+                    NavigationBarItem(
+                        selected = selectedTab == index,
+                        onClick = { viewModel.onTabSelected(index) },
+                        icon = { Text(if (selectedTab == index) "●" else "○") },
+                        label = { Text(label) },
+                        alwaysShowLabel = true
+                    )
+                }
+            }
+        }
+    ) { paddingValues ->
+        when (selectedTab) {
+            3 -> Box(modifier = Modifier.padding(paddingValues)) {
+                SettingsTabContent(viewModel)
+            }
+            else -> ChatListContent(viewModel = viewModel, paddingValues = paddingValues)
+        }
+    }
+}
+
+@Composable
 fun ChatListContent(
     viewModel: ChatViewModel,
     paddingValues: PaddingValues
