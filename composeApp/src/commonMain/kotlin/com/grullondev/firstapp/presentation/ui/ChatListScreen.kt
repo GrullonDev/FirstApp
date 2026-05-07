@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -361,6 +362,14 @@ fun PersonalizationSection(
     onToggleLiquidGlass: () -> Unit,
     onToggleDarkMode: () -> Unit
 ) {
+    val availableAccentColors = listOf(
+        Color(0xFF008069),
+        Color(0xFF2196F3),
+        Color(0xFFE91E63),
+        Color(0xFF9C27B0),
+        Color(0xFF607D8B)
+    )
+
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(
             modifier = Modifier.fillMaxWidth(), 
@@ -369,10 +378,10 @@ fun PersonalizationSection(
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text("Color de acento", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    val colors = listOf(Color(0xFF008069), Color(0xFF2196F3), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF607D8B))
-                    colors.forEach { color ->
+                    availableAccentColors.forEach { color ->
+                        val isSelected = themeColor.toArgb() == color.toArgb()
                         Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color).clickable { onColorSelected(color) }.let { 
-                            if (themeColor == color) it.background(color).padding(4.dp).background(if (isDarkMode) Color.Black else Color.White, CircleShape).padding(2.dp).background(color, CircleShape) else it
+                            if (isSelected) it.background(color).padding(4.dp).background(if (isDarkMode) Color.Black else Color.White, CircleShape).padding(2.dp).background(color, CircleShape) else it
                         })
                     }
                 }
@@ -449,9 +458,10 @@ fun SkeletonChatItem(isLiquidGlass: Boolean) {
 @Composable
 fun ChatItem(chat: Chat, onClick: () -> Unit, isLiquidGlass: Boolean = false, themeColor: Color) {
     Surface(
-        color = if (isLiquidGlass) MaterialTheme.colorScheme.surface.copy(alpha = 0.3f) else Color.Transparent, 
+        color = if (isLiquidGlass) MaterialTheme.colorScheme.surface.copy(alpha = 0.42f) else Color.Transparent,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp).let { if (isLiquidGlass) it.clip(RoundedCornerShape(12.dp)) else it }, 
-        shadowElevation = if (isLiquidGlass) 1.dp else 0.dp
+        tonalElevation = if (isLiquidGlass) 2.dp else 0.dp,
+        shadowElevation = if (isLiquidGlass) 2.dp else 0.dp
     ) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(when (chat.type) { ChatType.INDIVIDUAL -> Color.LightGray; ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f); ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f); ChatType.WORK -> Color(0xFF4CAF50).copy(alpha = 0.6f); ChatType.TOPIC -> Color(0xFF9C27B0).copy(alpha = 0.6f) }), contentAlignment = Alignment.Center) {

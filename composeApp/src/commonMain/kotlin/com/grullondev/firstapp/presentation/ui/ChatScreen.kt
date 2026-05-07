@@ -84,7 +84,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (isLiquidGlassEnabled) themeColor.copy(alpha = 0.8f) else themeColor,
+                        containerColor = if (isLiquidGlassEnabled) MaterialTheme.colorScheme.surface.copy(alpha = 0.68f) else themeColor,
                         titleContentColor = Color.White,
                         actionIconContentColor = Color.White
                     )
@@ -129,7 +129,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                             .background(
                                 androidx.compose.ui.graphics.Brush.verticalGradient(
                                     colors = listOf(
-                                        themeColor.copy(alpha = if (isDarkMode == true) 0.1f else 0.2f),
+                                        themeColor.copy(alpha = if (isDarkMode == true) 0.18f else 0.3f),
                                         MaterialTheme.colorScheme.background
                                     )
                                 )
