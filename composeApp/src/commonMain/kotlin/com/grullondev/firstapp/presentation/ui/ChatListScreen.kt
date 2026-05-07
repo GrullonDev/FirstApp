@@ -24,6 +24,56 @@ import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 
 @Composable
+fun ChatListScreen(viewModel: ChatViewModel) {
+    val selectedTab by viewModel.selectedTab.collectAsState()
+    val themeColor by viewModel.themeColor.collectAsState()
+    val tabs = listOf(
+        "Estado" to "⭕",
+        "Llamadas" to "📞",
+        "Chats" to "💬",
+        "Ajustes" to "⚙️"
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Clone WhatsApp",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeColor,
+                    titleContentColor = Color.White
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                tabs.forEachIndexed { index, tab ->
+                    NavigationBarItem(
+                        selected = selectedTab == index,
+                        onClick = { viewModel.onTabSelected(index) },
+                        icon = { Text(tab.second) },
+                        label = { Text(tab.first) },
+                        alwaysShowLabel = true
+                    )
+                }
+            }
+        }
+    ) { paddingValues ->
+        when (selectedTab) {
+            3 -> Box(modifier = Modifier.padding(paddingValues)) {
+                SettingsTabContent(viewModel)
+            }
+            else -> ChatListContent(viewModel = viewModel, paddingValues = paddingValues)
+        }
+    }
+}
+
+@Composable
 fun ChatListContent(
     viewModel: ChatViewModel,
     paddingValues: PaddingValues
@@ -132,37 +182,55 @@ fun SettingsTabContent(viewModel: ChatViewModel) {
     val themeColor by viewModel.themeColor.collectAsState()
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isDarkModeState by viewModel.isDarkMode.collectAsState()
+    val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
+    val privacyLockEnabled by viewModel.privacyLockEnabled.collectAsState()
+    val saveMediaOnMobileData by viewModel.saveMediaOnMobileData.collectAsState()
+    val useCompactFolders by viewModel.useCompactFolders.collectAsState()
+    val selectedLanguage by viewModel.selectedLanguage.collectAsState()
     val isDarkMode = isDarkModeState ?: androidx.compose.foundation.isSystemInDarkTheme()
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp)
-    ) {
-        item { ProfileSection(themeColor = themeColor) }
-        item {
-            SettingsCategoryTitle("Ajustes de chat")
-            PersonalizationSection(
-                themeColor = themeColor,
-                isLiquidGlassEnabled = isLiquidGlassEnabled,
-                isDarkMode = isDarkMode,
-                onColorSelected = { viewModel.updateThemeColor(it) },
-                onToggleLiquidGlass = { viewModel.toggleLiquidGlass() },
-                onToggleDarkMode = { viewModel.toggleDarkMode() }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        themeColor.copy(alpha = if (isLiquidGlassEnabled) 0.22f else 0.08f),
+                        MaterialTheme.colorScheme.background
+                    )
+                )
             )
-        }
-        item {
-            SettingsCategoryTitle("Ajustes")
-            SettingsMenuItem(icon = "🔔", title = "Notificaciones y sonidos", subtitle = "Activado")
-            SettingsMenuItem(icon = "🔐", title = "Privacidad y seguridad", subtitle = "Dos pasos, bloqueos")
-            SettingsMenuItem(icon = "📊", title = "Datos y almacenamiento", subtitle = "Uso de red")
-            SettingsMenuItem(icon = "📂", title = "Carpetas de chats", subtitle = "Personaliza tus pestañas")
-            SettingsMenuItem(icon = "🌐", title = "Idioma", subtitle = "Español")
-        }
-        item {
-            SettingsCategoryTitle("Ayuda")
-            SettingsMenuItem(icon = "❓", title = "Preguntas frecuentes")
-            SettingsMenuItem(icon = "📧", title = "Soporte técnico")
-            SettingsMenuItem(icon = "🌟", title = "Clone Premium", themeColor = themeColor)
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 16.dp)
+        ) {
+            item { ProfileSection(themeColor = themeColor) }
+            item {
+                SettingsCategoryTitle("Ajustes de chat")
+                PersonalizationSection(
+                    themeColor = themeColor,
+                    isLiquidGlassEnabled = isLiquidGlassEnabled,
+                    isDarkMode = isDarkMode,
+                    onColorSelected = { viewModel.updateThemeColor(it) },
+                    onToggleLiquidGlass = { viewModel.toggleLiquidGlass() },
+                    onToggleDarkMode = { viewModel.toggleDarkMode() }
+                )
+            }
+            item {
+                SettingsCategoryTitle("Ajustes")
+                SettingsToggleMenuItem("🔔", "Notificaciones y sonidos", if (notificationsEnabled) "Activado" else "Silenciado", notificationsEnabled) { viewModel.toggleNotifications() }
+                SettingsToggleMenuItem("🔐", "Privacidad y seguridad", if (privacyLockEnabled) "Dos pasos, bloqueos" else "Sin bloqueo", privacyLockEnabled) { viewModel.togglePrivacyLock() }
+                SettingsToggleMenuItem("📊", "Datos y almacenamiento", if (saveMediaOnMobileData) "Guardar en datos móviles" else "Solo con Wi‑Fi", saveMediaOnMobileData) { viewModel.toggleSaveMediaOnMobileData() }
+                SettingsToggleMenuItem("📂", "Carpetas de chats", if (useCompactFolders) "Vista compacta" else "Vista completa", useCompactFolders) { viewModel.toggleCompactFolders() }
+                SettingsActionMenuItem("🌐", "Idioma", selectedLanguage) { viewModel.toggleLanguage() }
+            }
+            item {
+                SettingsCategoryTitle("Ayuda")
+                SettingsActionMenuItem("❓", "Preguntas frecuentes", "Guía rápida")
+                SettingsActionMenuItem("📧", "Soporte técnico", "Contacto")
+                SettingsActionMenuItem("🌟", "Clone Premium", "Prueba gratis", themeColor)
+            }
         }
     }
 }
@@ -200,8 +268,8 @@ fun SettingsCategoryTitle(title: String) {
 }
 
 @Composable
-fun SettingsMenuItem(icon: String, title: String, subtitle: String? = null, themeColor: Color? = null) {
-    Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent, onClick = { }) {
+fun SettingsActionMenuItem(icon: String, title: String, subtitle: String? = null, themeColor: Color? = null, onClick: () -> Unit = {}) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent, onClick = onClick) {
         Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(icon, fontSize = 24.sp)
             Spacer(modifier = Modifier.width(20.dp))
@@ -210,6 +278,21 @@ fun SettingsMenuItem(icon: String, title: String, subtitle: String? = null, them
                 if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text("›", fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+        }
+    }
+}
+
+@Composable
+fun SettingsToggleMenuItem(icon: String, title: String, subtitle: String, checked: Boolean, onToggle: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent, onClick = onToggle) {
+        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(icon, fontSize = 24.sp)
+            Spacer(modifier = Modifier.width(20.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = checked, onCheckedChange = { onToggle() })
         }
     }
 }
