@@ -1,7 +1,6 @@
 package com.grullondev.firstapp.presentation.viewmodel
 
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.grullondev.firstapp.domain.model.*
@@ -36,7 +35,7 @@ class ChatViewModel(
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
     val themeColor: StateFlow<Color> = settingsRepository.getThemeColor()
-        .map { colorValue -> Color(colorValue.toInt()) }
+        .map { Color(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, Color(0xFF008069))
 
     val isLiquidGlassEnabled = settingsRepository.isLiquidGlassEnabled()
@@ -45,7 +44,7 @@ class ChatViewModel(
     private val _replyingTo = MutableStateFlow<ChatMessage?>(null)
     val replyingTo = _replyingTo.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(2) // Default to Chats tab
+    private val _selectedTab = MutableStateFlow(2)
     val selectedTab = _selectedTab.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
@@ -61,9 +60,12 @@ class ChatViewModel(
     private val _selectedLanguage = MutableStateFlow("Español")
     val selectedLanguage = _selectedLanguage.asStateFlow()
 
+    private val _calendarEvents = MutableStateFlow<List<CalendarEvent>>(emptyList())
+    val calendarEvents: StateFlow<List<CalendarEvent>> = _calendarEvents.asStateFlow()
+
     init {
         viewModelScope.launch {
-            kotlinx.coroutines.delay(2000) // Simular carga inicial
+            kotlinx.coroutines.delay(2000)
             _isLoading.value = false
         }
     }
@@ -72,38 +74,22 @@ class ChatViewModel(
         chats.find { it.id == id }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun onChatSelected(chatId: String?) {
-        _selectedChatId.value = chatId
-    }
-
-    fun onTextChanged(newText: String) {
-        _inputText.value = newText
-    }
-
-    fun onTabSelected(index: Int) {
-        _selectedTab.value = index
-    }
+    fun onChatSelected(chatId: String?) { _selectedChatId.value = chatId }
+    fun onTextChanged(newText: String) { _inputText.value = newText }
+    fun onTabSelected(index: Int) { _selectedTab.value = index }
 
     fun toggleLiquidGlass() {
-        viewModelScope.launch {
-            settingsRepository.setLiquidGlassEnabled(!isLiquidGlassEnabled.value)
-        }
+        viewModelScope.launch { settingsRepository.setLiquidGlassEnabled(!isLiquidGlassEnabled.value) }
     }
 
     fun toggleDarkMode() {
-        viewModelScope.launch {
-            settingsRepository.setDarkMode(!(isDarkMode.value ?: false))
-        }
+        viewModelScope.launch { settingsRepository.setDarkMode(!(isDarkMode.value ?: false)) }
     }
 
-    fun onReplyTo(message: ChatMessage?) {
-        _replyingTo.value = message
-    }
+    fun onReplyTo(message: ChatMessage?) { _replyingTo.value = message }
 
     fun updateThemeColor(color: Color) {
-        viewModelScope.launch {
-            settingsRepository.setThemeColor(color.toArgb().toLong())
-        }
+        viewModelScope.launch { settingsRepository.setThemeColor(color.value.toLong()) }
     }
 
     fun sendMessage() {
@@ -119,52 +105,39 @@ class ChatViewModel(
 
     fun sendMedia(type: MessageType, fileName: String? = null) {
         val chatId = _selectedChatId.value ?: return
-        
         val permissionRequired = when(type) {
             MessageType.IMAGE -> Permission.GALLERY
             MessageType.FILE -> Permission.FILE_STORAGE
             MessageType.AUDIO -> Permission.RECORD_AUDIO
             else -> null
         }
-
         viewModelScope.launch {
             val isGranted = if (permissionRequired != null) {
                 permissionManager.requestPermission(permissionRequired) == PermissionState.GRANTED
             } else true
-
-            if (isGranted) {
-                repository.sendMessage(chatId, "", type, fileName)
-            }
+            if (isGranted) repository.sendMessage(chatId, "", type, fileName)
         }
     }
 
-    fun onBackPress() {
-        _selectedChatId.value = null
-    }
+    fun onBackPress() { _selectedChatId.value = null }
 
     fun markAllAsRead() {
-        viewModelScope.launch {
-            repository.markAllAsRead()
-        }
+        viewModelScope.launch { repository.markAllAsRead() }
     }
 
-    fun toggleNotifications() {
-        _notificationsEnabled.value = !_notificationsEnabled.value
-    }
-
-    fun togglePrivacyLock() {
-        _privacyLockEnabled.value = !_privacyLockEnabled.value
-    }
-
-    fun toggleSaveMediaOnMobileData() {
-        _saveMediaOnMobileData.value = !_saveMediaOnMobileData.value
-    }
-
-    fun toggleCompactFolders() {
-        _useCompactFolders.value = !_useCompactFolders.value
-    }
-
+    fun toggleNotifications() { _notificationsEnabled.value = !_notificationsEnabled.value }
+    fun togglePrivacyLock() { _privacyLockEnabled.value = !_privacyLockEnabled.value }
+    fun toggleSaveMediaOnMobileData() { _saveMediaOnMobileData.value = !_saveMediaOnMobileData.value }
+    fun toggleCompactFolders() { _useCompactFolders.value = !_useCompactFolders.value }
     fun toggleLanguage() {
         _selectedLanguage.value = if (_selectedLanguage.value == "Español") "English" else "Español"
+    }
+
+    fun addCalendarEvent(event: CalendarEvent) {
+        _calendarEvents.value += event
+    }
+
+    fun deleteCalendarEvent(id: String) {
+        _calendarEvents.value = _calendarEvents.value.filter { it.id != id }
     }
 }

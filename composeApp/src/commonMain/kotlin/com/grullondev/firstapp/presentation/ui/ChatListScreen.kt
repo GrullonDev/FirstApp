@@ -116,9 +116,8 @@ fun ChatListContent(
             )
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(if (isLiquidGlassEnabled) Color.Transparent else MaterialTheme.colorScheme.background)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 8.dp)
             ) {
                 if (isLoading) {
                     items(8) {
@@ -129,9 +128,14 @@ fun ChatListContent(
                         ChatItem(
                             chat = chat,
                             onClick = { viewModel.onChatSelected(chat.id) },
-                            isLiquidGlass = isLiquidGlassEnabled,
-                            themeColor = themeColor
+                            isLiquidGlass = isLiquidGlassEnabled
                         )
+                        if (!isLiquidGlassEnabled) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 80.dp, end = 16.dp),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+                            )
+                        }
                     }
                 }
             }
@@ -251,8 +255,8 @@ fun ProfileSection(themeColor: Color) {
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text("Julián Grullón", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Text("+1 829 123 4567", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Jorge Grullón", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("+502 1234 5678", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("@jgrullon", style = MaterialTheme.typography.bodySmall, color = themeColor)
             }
         }
@@ -403,7 +407,7 @@ fun SkeletonChatItem(isLiquidGlass: Boolean) {
 }
 
 @Composable
-fun ChatItem(chat: Chat, onClick: () -> Unit, isLiquidGlass: Boolean = false, themeColor: Color) {
+fun ChatItem(chat: Chat, onClick: () -> Unit, isLiquidGlass: Boolean = false, themeColor: Color, ) {
     Surface(
         color = if (isLiquidGlass) MaterialTheme.colorScheme.surface.copy(alpha = 0.42f) else Color.Transparent,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp).let { if (isLiquidGlass) it.clip(RoundedCornerShape(12.dp)) else it }, 
