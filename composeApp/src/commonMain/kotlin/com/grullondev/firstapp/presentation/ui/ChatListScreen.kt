@@ -27,12 +27,14 @@ import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 fun ChatListScreen(viewModel: ChatViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val themeColor by viewModel.themeColor.collectAsState()
+
     val tabs = listOf(
         "Estado" to "⭕",
         "Llamadas" to "📞",
         "Chats" to "💬",
         "Ajustes" to "⚙️"
     )
+
 
     Scaffold(
         topBar = {
@@ -58,6 +60,7 @@ fun ChatListScreen(viewModel: ChatViewModel) {
                         onClick = { viewModel.onTabSelected(index) },
                         icon = { Text(tab.second) },
                         label = { Text(tab.first) },
+
                         alwaysShowLabel = true
                     )
                 }
