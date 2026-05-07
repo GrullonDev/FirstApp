@@ -65,10 +65,7 @@ class ChatViewModel(
     val calendarEvents: StateFlow<List<CalendarEvent>> = _calendarEvents.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            kotlinx.coroutines.delay(2000)
-            _isLoading.value = false
-        }
+        _isLoading.value = false
     }
 
     val selectedChat: StateFlow<Chat?> = combine(chats, _selectedChatId) { chats, id ->
@@ -102,6 +99,11 @@ class ChatViewModel(
                 _inputText.value = ""
             }
         }
+    }
+
+    fun sendQuickReply(text: String) {
+        val chatId = _selectedChatId.value ?: return
+        viewModelScope.launch { repository.sendMessage(chatId, text) }
     }
 
     fun sendMedia(type: MessageType, fileName: String? = null) {

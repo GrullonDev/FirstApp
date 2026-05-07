@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.LazyRow
 import com.grullondev.firstapp.domain.model.ChatMessage
 import com.grullondev.firstapp.domain.model.MessageType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
@@ -100,6 +101,10 @@ fun ChatScreen(viewModel: ChatViewModel) {
             },
             bottomBar = {
                 Column(modifier = Modifier.background(Color.Transparent)) {
+                    QuickReplyBar(                          // ← AGREGAR
+                        onQuickReply = { viewModel.sendQuickReply(it) },
+                        themeColor = themeColor
+                    )
                     AnimatedVisibility(visible = replyingTo != null) {
                         ReplyPreview(
                             message = replyingTo,
@@ -169,6 +174,31 @@ fun ChatScreen(viewModel: ChatViewModel) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun QuickReplyBar(onQuickReply: (String) -> Unit, themeColor: Color) {
+    val quickReplies = listOf("👍", "Ok!", "Ya voy 🚗", "¿Cuándo?", "Gracias! 🙏", "En reunión 📅")
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(quickReplies) { reply ->
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = themeColor.copy(alpha = 0.12f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, themeColor.copy(alpha = 0.35f)),
+                onClick = { onQuickReply(reply) }
+            ) {
+                Text(
+                    text = reply,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = themeColor
+                )
             }
         }
     }

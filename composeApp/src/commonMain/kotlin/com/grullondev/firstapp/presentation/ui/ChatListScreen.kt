@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.lazy.LazyRow
 import com.grullondev.firstapp.domain.model.Chat
 import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
@@ -114,6 +115,16 @@ fun ChatListContent(
                 onQueryChange = { searchQuery = it },
                 themeColor = themeColor
             )
+            if (searchQuery.isEmpty()) {
+                val favorites = chats.filter { it.type == ChatType.INDIVIDUAL }.take(5)
+                if (favorites.isNotEmpty()) {
+                    QuickAccessRow(
+                        chats = favorites,
+                        onChatClick = { viewModel.onChatSelected(it) },
+                        themeColor = themeColor
+                    )
+                }
+            }
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -141,6 +152,76 @@ fun ChatListContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun QuickAccessRow(
+    chats: List<Chat>,
+    onChatClick: (String) -> Unit,
+    themeColor: Color
+) {
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(
+            text = "Acceso rápido",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, bottom = 6.dp)
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            items(chats, key = { it.id }) { chat ->
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { onChatClick(chat.id) }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(54.dp)
+                            .clip(CircleShape)
+                            .background(themeColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = chat.name.take(1),
+                            color = Color.White,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (chat.unreadCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFF3B30))
+                                    .align(Alignment.TopEnd),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = chat.unreadCount.toString(),
+                                    color = Color.White,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = chat.name.split(" ").first(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(top = 8.dp),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+        )
     }
 }
 
