@@ -9,6 +9,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.grullondev.firstapp.data.repository.InMemoryChatRepository
 import com.grullondev.firstapp.data.repository.MockPermissionManager
 import com.grullondev.firstapp.data.repository.PersistentSettingsRepository
+import com.grullondev.firstapp.presentation.ui.CommonBackHandler
 import com.grullondev.firstapp.presentation.ui.ChatListScreen
 import com.grullondev.firstapp.presentation.ui.ChatScreen
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
@@ -58,6 +59,9 @@ fun App() {
     }
 
     MaterialTheme(colorScheme = colorScheme) {
+        CommonBackHandler(enabled = selectedChatId != null) {
+            viewModel.onBackPress()
+        }
         Surface(color = MaterialTheme.colorScheme.background) {
             AnimatedContent(
                 targetState = selectedChatId,

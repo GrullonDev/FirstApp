@@ -44,11 +44,21 @@ class ChatViewModel(
     private val _replyingTo = MutableStateFlow<ChatMessage?>(null)
     val replyingTo = _replyingTo.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(3) // Default to Chats tab
+    private val _selectedTab = MutableStateFlow(2) // Default to Chats tab
     val selectedTab = _selectedTab.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
+    private val _notificationsEnabled = MutableStateFlow(true)
+    val notificationsEnabled = _notificationsEnabled.asStateFlow()
+    private val _privacyLockEnabled = MutableStateFlow(true)
+    val privacyLockEnabled = _privacyLockEnabled.asStateFlow()
+    private val _saveMediaOnMobileData = MutableStateFlow(false)
+    val saveMediaOnMobileData = _saveMediaOnMobileData.asStateFlow()
+    private val _useCompactFolders = MutableStateFlow(false)
+    val useCompactFolders = _useCompactFolders.asStateFlow()
+    private val _selectedLanguage = MutableStateFlow("Español")
+    val selectedLanguage = _selectedLanguage.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -135,5 +145,25 @@ class ChatViewModel(
         viewModelScope.launch {
             repository.markAllAsRead()
         }
+    }
+
+    fun toggleNotifications() {
+        _notificationsEnabled.value = !_notificationsEnabled.value
+    }
+
+    fun togglePrivacyLock() {
+        _privacyLockEnabled.value = !_privacyLockEnabled.value
+    }
+
+    fun toggleSaveMediaOnMobileData() {
+        _saveMediaOnMobileData.value = !_saveMediaOnMobileData.value
+    }
+
+    fun toggleCompactFolders() {
+        _useCompactFolders.value = !_useCompactFolders.value
+    }
+
+    fun toggleLanguage() {
+        _selectedLanguage.value = if (_selectedLanguage.value == "Español") "English" else "Español"
     }
 }
