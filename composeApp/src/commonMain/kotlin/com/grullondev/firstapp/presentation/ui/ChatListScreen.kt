@@ -128,7 +128,8 @@ fun ChatListContent(
                         ChatItem(
                             chat = chat,
                             onClick = { viewModel.onChatSelected(chat.id) },
-                            isLiquidGlass = isLiquidGlassEnabled
+                            isLiquidGlass = isLiquidGlassEnabled,
+                            themeColor = themeColor
                         )
                         if (!isLiquidGlassEnabled) {
                             HorizontalDivider(
@@ -407,33 +408,87 @@ fun SkeletonChatItem(isLiquidGlass: Boolean) {
 }
 
 @Composable
-fun ChatItem(chat: Chat, onClick: () -> Unit, isLiquidGlass: Boolean = false, themeColor: Color, ) {
+fun ChatItem(
+    chat: Chat,
+    onClick: () -> Unit,
+    isLiquidGlass: Boolean = false,
+    themeColor: Color = Color(0xFF008069)
+) {
     Surface(
-        color = if (isLiquidGlass) MaterialTheme.colorScheme.surface.copy(alpha = 0.42f) else Color.Transparent,
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp).let { if (isLiquidGlass) it.clip(RoundedCornerShape(12.dp)) else it }, 
-        tonalElevation = if (isLiquidGlass) 2.dp else 0.dp,
-        shadowElevation = if (isLiquidGlass) 2.dp else 0.dp
+        color = if (isLiquidGlass)
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
+        else
+            MaterialTheme.colorScheme.surface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .let {
+                if (isLiquidGlass) it.padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(12.dp))
+                else it
+            },
+        shadowElevation = 0.dp
     ) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(when (chat.type) { ChatType.INDIVIDUAL -> Color.LightGray; ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f); ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f); ChatType.WORK -> Color(0xFF4CAF50).copy(alpha = 0.6f); ChatType.TOPIC -> Color(0xFF9C27B0).copy(alpha = 0.6f) }), contentAlignment = Alignment.Center) {
-                Text(text = when (chat.type) { ChatType.INDIVIDUAL -> chat.name.take(1); ChatType.GROUP -> "👥"; ChatType.FAMILY -> "🏠"; ChatType.WORK -> "💼"; ChatType.TOPIC -> "💡" }, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier.size(52.dp).clip(CircleShape).background(
+                    when (chat.type) {
+                        ChatType.INDIVIDUAL -> Color.LightGray
+                        ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f)
+                        ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f)
+                        ChatType.WORK -> Color(0xFF4CAF50).copy(alpha = 0.6f)
+                        ChatType.TOPIC -> Color(0xFF9C27B0).copy(alpha = 0.6f)
+                    }
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when (chat.type) {
+                        ChatType.INDIVIDUAL -> chat.name.take(1)
+                        ChatType.GROUP -> "👥"
+                        ChatType.FAMILY -> "🏠"
+                        ChatType.WORK -> "💼"
+                        ChatType.TOPIC -> "💡"
+                    },
+                    color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = chat.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            text = chat.name, style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface
+                        )
                         if (chat.type != ChatType.INDIVIDUAL) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Surface(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
-                                Text(text = when (chat.type) { ChatType.GROUP -> "Grupo"; ChatType.FAMILY -> "Familia"; ChatType.WORK -> "Trabajo"; ChatType.TOPIC -> "Temas"; ChatType.INDIVIDUAL -> "" }, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    text = when (chat.type) {
+                                        ChatType.GROUP -> "Grupo"; ChatType.FAMILY -> "Familia"
+                                        ChatType.WORK -> "Trabajo"; ChatType.TOPIC -> "Temas"
+                                        ChatType.INDIVIDUAL -> ""
+                                    },
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
-                    Text(text = chat.lastMessageTime, style = MaterialTheme.typography.bodySmall, color = if (chat.unreadCount > 0) themeColor else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = chat.lastMessageTime,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (chat.unreadCount > 0) themeColor else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = chat.lastMessage, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(
+                        text = chat.lastMessage, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
+                    )
                     if (chat.unreadCount > 0) {
                         Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(themeColor), contentAlignment = Alignment.Center) {
                             Text(text = chat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
