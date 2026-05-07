@@ -23,6 +23,60 @@ import com.grullondev.firstapp.domain.model.Chat
 import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ChatListScreen(viewModel: ChatViewModel) {
+    val selectedTab by viewModel.selectedTab.collectAsState()
+    val themeColor by viewModel.themeColor.collectAsState()
+
+    val tabs = listOf(
+        "Estado" to "⭕",
+        "Llamadas" to "📞",
+        "Chats" to "💬",
+        "Ajustes" to "⚙️"
+    )
+
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Clone WhatsApp",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = themeColor,
+                    titleContentColor = Color.White
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar {
+                tabs.forEachIndexed { index, tab ->
+                    NavigationBarItem(
+                        selected = selectedTab == index,
+                        onClick = { viewModel.onTabSelected(index) },
+                        icon = { Text(tab.second) },
+                        label = { Text(tab.first) },
+
+                        alwaysShowLabel = true
+                    )
+                }
+            }
+        }
+    ) { paddingValues ->
+        when (selectedTab) {
+            3 -> Box(modifier = Modifier.padding(paddingValues)) {
+                SettingsTabContent(viewModel)
+            }
+            else -> ChatListContent(viewModel = viewModel, paddingValues = paddingValues)
+        }
+    }
+}
+
 @Composable
 fun ChatListScreen(viewModel: ChatViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
@@ -84,7 +138,7 @@ fun ChatListContent(
     val isDarkModeState by viewModel.isDarkMode.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isDarkMode = isDarkModeState ?: androidx.compose.foundation.isSystemInDarkTheme()
-    
+
     var searchQuery by remember { mutableStateOf("") }
     val filteredChats = if (searchQuery.isEmpty()) chats else {
         chats.filter { it.name.contains(searchQuery, ignoreCase = true) || it.lastMessage.contains(searchQuery, ignoreCase = true) }
@@ -105,14 +159,14 @@ fun ChatListContent(
                     )
             )
         }
-        
+
         Column {
             SearchBarBelowAppBar(
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
                 themeColor = themeColor
             )
-            
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -125,7 +179,7 @@ fun ChatListContent(
                 } else {
                     items(filteredChats, key = { it.id }) { chat ->
                         ChatItem(
-                            chat = chat, 
+                            chat = chat,
                             onClick = { viewModel.onChatSelected(chat.id) },
                             isLiquidGlass = isLiquidGlassEnabled,
                             themeColor = themeColor
