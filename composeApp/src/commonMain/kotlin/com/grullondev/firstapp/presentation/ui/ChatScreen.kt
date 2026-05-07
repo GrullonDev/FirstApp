@@ -433,7 +433,7 @@ fun MessageBubble(
                         )
                         if (message.isMine) {
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("✓✓", color = Color(0xFF34B7F1), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("✓✓", color = themeColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
