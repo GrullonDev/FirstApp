@@ -1,6 +1,7 @@
 package com.grullondev.firstapp.presentation.viewmodel
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.grullondev.firstapp.domain.model.*
@@ -35,7 +36,7 @@ class ChatViewModel(
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
     val themeColor: StateFlow<Color> = settingsRepository.getThemeColor()
-        .map { Color(it) }
+        .map { colorValue -> Color(colorValue.toInt()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, Color(0xFF008069))
 
     val isLiquidGlassEnabled = settingsRepository.isLiquidGlassEnabled()
@@ -101,7 +102,7 @@ class ChatViewModel(
 
     fun updateThemeColor(color: Color) {
         viewModelScope.launch {
-            settingsRepository.setThemeColor(color.value.toLong())
+            settingsRepository.setThemeColor(color.toArgb().toLong())
         }
     }
 
