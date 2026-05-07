@@ -52,7 +52,7 @@ fun App() {
             surfaceVariant = Color(0xFFF0F2F5),
             onSurface = Color.Black,
             onSurfaceVariant = Color.Gray,
-            tertiaryContainer = Color(0xFFE7FFDB),
+            tertiaryContainer = themeColor.copy(alpha = 0.2f),
             secondaryContainer = Color.White,
             onSecondaryContainer = Color.Black
         )
