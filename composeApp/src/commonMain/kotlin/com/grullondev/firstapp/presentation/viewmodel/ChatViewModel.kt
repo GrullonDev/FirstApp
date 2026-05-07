@@ -6,13 +6,15 @@ import androidx.lifecycle.viewModelScope
 import com.grullondev.firstapp.domain.model.*
 import com.grullondev.firstapp.domain.repository.ChatRepository
 import com.grullondev.firstapp.domain.repository.PermissionManager
+import com.grullondev.firstapp.domain.repository.SettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class ChatViewModel(
     private val repository: ChatRepository,
-    private val permissionManager: PermissionManager
+    private val permissionManager: PermissionManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val chats: StateFlow<List<Chat>> = repository.getChats()
@@ -32,14 +34,28 @@ class ChatViewModel(
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
-    private val _themeColor = MutableStateFlow(Color(0xFF008069)) // Default WhatsApp Green
-    val themeColor = _themeColor.asStateFlow()
+    val themeColor: StateFlow<Color> = settingsRepository.getThemeColor()
+        .map { Color(it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Color(0xFF008069))
 
-    private val _isLiquidGlassEnabled = MutableStateFlow(false)
-    val isLiquidGlassEnabled = _isLiquidGlassEnabled.asStateFlow()
+    val isLiquidGlassEnabled = settingsRepository.isLiquidGlassEnabled()
+    val isDarkMode = settingsRepository.isDarkMode()
+
+    private val _replyingTo = MutableStateFlow<ChatMessage?>(null)
+    val replyingTo = _replyingTo.asStateFlow()
 
     private val _selectedTab = MutableStateFlow(3) // Default to Chats tab
     val selectedTab = _selectedTab.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading = _isLoading.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(2000) // Simular carga inicial
+            _isLoading.value = false
+        }
+    }
 
     val selectedChat: StateFlow<Chat?> = combine(chats, _selectedChatId) { chats, id ->
         chats.find { it.id == id }
@@ -58,11 +74,25 @@ class ChatViewModel(
     }
 
     fun toggleLiquidGlass() {
-        _isLiquidGlassEnabled.value = !_isLiquidGlassEnabled.value
+        viewModelScope.launch {
+            settingsRepository.setLiquidGlassEnabled(!isLiquidGlassEnabled.value)
+        }
+    }
+
+    fun toggleDarkMode() {
+        viewModelScope.launch {
+            settingsRepository.setDarkMode(!(isDarkMode.value ?: false))
+        }
+    }
+
+    fun onReplyTo(message: ChatMessage?) {
+        _replyingTo.value = message
     }
 
     fun updateThemeColor(color: Color) {
-        _themeColor.value = color
+        viewModelScope.launch {
+            settingsRepository.setThemeColor(color.value.toLong())
+        }
     }
 
     fun sendMessage() {
