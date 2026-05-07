@@ -44,7 +44,7 @@ class ChatViewModel(
     private val _replyingTo = MutableStateFlow<ChatMessage?>(null)
     val replyingTo = _replyingTo.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(3) // Default to Chats tab
+    private val _selectedTab = MutableStateFlow(2) // Default to Chats tab
     val selectedTab = _selectedTab.asStateFlow()
 
     private val _isLoading = MutableStateFlow(true)
