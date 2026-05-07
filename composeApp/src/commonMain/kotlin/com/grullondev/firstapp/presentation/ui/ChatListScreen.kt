@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -248,13 +249,13 @@ fun ProfileSection(themeColor: Color) {
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(themeColor), contentAlignment = Alignment.Center) {
-                Text("JD", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("GD", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text("Julián Grullón", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Text("+1 829 123 4567", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("@jgrullon", style = MaterialTheme.typography.bodySmall, color = themeColor)
+                Text("Grullón Dev", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("+502 4290 9548", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("@grullondev", style = MaterialTheme.typography.bodySmall, color = themeColor)
             }
         }
     }
@@ -303,28 +304,47 @@ fun SettingsToggleMenuItem(icon: String, title: String, subtitle: String, checke
 
 @Composable
 fun PersonalizationSection(
-    themeColor: Color, 
-    isLiquidGlassEnabled: Boolean, 
+    themeColor: Color,
+    isLiquidGlassEnabled: Boolean,
     isDarkMode: Boolean,
-    onColorSelected: (Color) -> Unit, 
+    onColorSelected: (Color) -> Unit,
     onToggleLiquidGlass: () -> Unit,
     onToggleDarkMode: () -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(
-            modifier = Modifier.fillMaxWidth(), 
+            modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Color de acento", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    val colors = listOf(Color(0xFF008069), Color(0xFF2196F3), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF607D8B))
-                    colors.forEach { color ->
-                        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color).clickable { onColorSelected(color) }.let { 
-                            if (themeColor == color) it.background(color).padding(4.dp).background(if (isDarkMode) Color.Black else Color.White, CircleShape).padding(2.dp).background(color, CircleShape) else it
-                        })
+                Text("Color de la app", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+
+                val accentColors = listOf(
+                    Color(0xFF008069), Color(0xFF2196F3), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF607D8B),
+                    Color(0xFFFF5722), Color(0xFF4CAF50), Color(0xFFFF9800), Color(0xFF00BCD4), Color(0xFFF44336)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    accentColors.chunked(5).forEach { rowColors ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            rowColors.forEach { color ->
+                                val isSelected = themeColor.toArgb() == color.toArgb()
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .clickable { onColorSelected(color) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isSelected) {
+                                        Text("✓", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
