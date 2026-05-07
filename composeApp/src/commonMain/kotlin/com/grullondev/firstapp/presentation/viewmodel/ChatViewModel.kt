@@ -36,7 +36,7 @@ class ChatViewModel(
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
     val themeColor: StateFlow<Color> = settingsRepository.getThemeColor()
-        .map { Color(it.toInt()) }
+        .map { Color(it.toULong()) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, Color(0xFF008069))
 
     val isLiquidGlassEnabled = settingsRepository.isLiquidGlassEnabled()

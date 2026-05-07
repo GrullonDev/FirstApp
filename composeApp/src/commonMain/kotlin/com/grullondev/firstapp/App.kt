@@ -5,8 +5,10 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import com.grullondev.firstapp.data.repository.InMemoryChatRepository
+import com.grullondev.firstapp.data.repository.InMemorySettingsRepository
 import com.grullondev.firstapp.data.repository.MockPermissionManager
 import com.grullondev.firstapp.data.repository.PersistentSettingsRepository
 import com.grullondev.firstapp.presentation.ui.CommonBackHandler
@@ -18,9 +20,12 @@ import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 @Preview
 fun App() {
     // En una aplicación real, esto se manejaría con Inyección de Dependencias (ej. Koin)
+    val isPreview = LocalInspectionMode.current
     val repository = remember { InMemoryChatRepository() }
     val permissionManager = remember { MockPermissionManager() }
-    val settingsRepository = remember { PersistentSettingsRepository() }
+    val settingsRepository = remember { 
+        if (isPreview) InMemorySettingsRepository() else PersistentSettingsRepository() 
+    }
     val viewModel = remember { ChatViewModel(repository, permissionManager, settingsRepository) }
     
     val selectedChatId by viewModel.selectedChatId.collectAsState()
