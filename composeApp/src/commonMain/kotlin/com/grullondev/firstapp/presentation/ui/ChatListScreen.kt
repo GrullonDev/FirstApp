@@ -29,59 +29,6 @@ import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 fun ChatListScreen(viewModel: ChatViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val themeColor by viewModel.themeColor.collectAsState()
-
-    val tabs = listOf(
-        "Estado" to "⭕",
-        "Llamadas" to "📞",
-        "Chats" to "💬",
-        "Ajustes" to "⚙️"
-    )
-
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Clone WhatsApp",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = themeColor,
-                    titleContentColor = Color.White
-                )
-            )
-        },
-        bottomBar = {
-            NavigationBar {
-                tabs.forEachIndexed { index, tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == index,
-                        onClick = { viewModel.onTabSelected(index) },
-                        icon = { Text(tab.second) },
-                        label = { Text(tab.first) },
-
-                        alwaysShowLabel = true
-                    )
-                }
-            }
-        }
-    ) { paddingValues ->
-        when (selectedTab) {
-            3 -> Box(modifier = Modifier.padding(paddingValues)) {
-                SettingsTabContent(viewModel)
-            }
-            else -> ChatListContent(viewModel = viewModel, paddingValues = paddingValues)
-        }
-    }
-}
-
-@Composable
-fun ChatListScreen(viewModel: ChatViewModel) {
-    val selectedTab by viewModel.selectedTab.collectAsState()
-    val themeColor by viewModel.themeColor.collectAsState()
     val tabs = listOf(
         "Estado" to "⭕",
         "Llamadas" to "📞",
@@ -376,10 +323,10 @@ fun PersonalizationSection(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Color de acento", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Text("Color de app", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                     availableAccentColors.forEach { color ->
-                        val isSelected = themeColor.toArgb() == color.toArgb()
+                        val isSelected = themeColor.value.toLong() == color.value.toLong()
                         Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color).clickable { onColorSelected(color) }.let { 
                             if (isSelected) it.background(color).padding(4.dp).background(if (isDarkMode) Color.Black else Color.White, CircleShape).padding(2.dp).background(color, CircleShape) else it
                         })
