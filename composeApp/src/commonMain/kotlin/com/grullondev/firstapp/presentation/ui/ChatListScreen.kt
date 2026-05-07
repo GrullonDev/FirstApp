@@ -29,14 +29,12 @@ import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 fun ChatListScreen(viewModel: ChatViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val themeColor by viewModel.themeColor.collectAsState()
-
     val tabs = listOf(
         "Estado" to "⭕",
         "Llamadas" to "📞",
         "Chats" to "💬",
         "Ajustes" to "⚙️"
     )
-
 
     Scaffold(
         topBar = {
@@ -62,7 +60,6 @@ fun ChatListScreen(viewModel: ChatViewModel) {
                         onClick = { viewModel.onTabSelected(index) },
                         icon = { Text(tab.second) },
                         label = { Text(tab.first) },
-
                         alwaysShowLabel = true
                     )
                 }
@@ -119,9 +116,8 @@ fun ChatListContent(
             )
 
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(if (isLiquidGlassEnabled) Color.Transparent else MaterialTheme.colorScheme.background)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 8.dp)
             ) {
                 if (isLoading) {
                     items(8) {
@@ -132,8 +128,15 @@ fun ChatListContent(
                         ChatItem(
                             chat = chat,
                             onClick = { viewModel.onChatSelected(chat.id) },
-                            isLiquidGlass = isLiquidGlassEnabled
+                            isLiquidGlass = isLiquidGlassEnabled,
+                            themeColor = themeColor
                         )
+                        if (!isLiquidGlassEnabled) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 80.dp, end = 16.dp),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+                            )
+                        }
                     }
                 }
             }
@@ -212,7 +215,7 @@ fun SettingsTabContent(viewModel: ChatViewModel) {
         ) {
             item { ProfileSection(themeColor = themeColor) }
             item {
-                SettingsCategoryTitle("Ajustes de chat")
+                SettingsCategoryTitle("Ajustes de chat", themeColor)
                 PersonalizationSection(
                     themeColor = themeColor,
                     isLiquidGlassEnabled = isLiquidGlassEnabled,
@@ -223,7 +226,7 @@ fun SettingsTabContent(viewModel: ChatViewModel) {
                 )
             }
             item {
-                SettingsCategoryTitle("Ajustes")
+                SettingsCategoryTitle("Ajustes", themeColor)
                 SettingsToggleMenuItem("🔔", "Notificaciones y sonidos", if (notificationsEnabled) "Activado" else "Silenciado", notificationsEnabled) { viewModel.toggleNotifications() }
                 SettingsToggleMenuItem("🔐", "Privacidad y seguridad", if (privacyLockEnabled) "Dos pasos, bloqueos" else "Sin bloqueo", privacyLockEnabled) { viewModel.togglePrivacyLock() }
                 SettingsToggleMenuItem("📊", "Datos y almacenamiento", if (saveMediaOnMobileData) "Guardar en datos móviles" else "Solo con Wi‑Fi", saveMediaOnMobileData) { viewModel.toggleSaveMediaOnMobileData() }
@@ -231,7 +234,7 @@ fun SettingsTabContent(viewModel: ChatViewModel) {
                 SettingsActionMenuItem("🌐", "Idioma", selectedLanguage) { viewModel.toggleLanguage() }
             }
             item {
-                SettingsCategoryTitle("Ayuda")
+                SettingsCategoryTitle("Ayuda", themeColor)
                 SettingsActionMenuItem("❓", "Preguntas frecuentes", "Guía rápida")
                 SettingsActionMenuItem("📧", "Soporte técnico", "Contacto")
                 SettingsActionMenuItem("🌟", "Clone Premium", "Prueba gratis", themeColor)
@@ -253,21 +256,21 @@ fun ProfileSection(themeColor: Color) {
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
-                Text("Grullón Dev", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Text("+502 4290 9548", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("@grullondev", style = MaterialTheme.typography.bodySmall, color = themeColor)
+                Text("Jorge Grullón", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text("+502 1234 5678", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("@jgrullon", style = MaterialTheme.typography.bodySmall, color = themeColor)
             }
         }
     }
 }
 
 @Composable
-fun SettingsCategoryTitle(title: String) {
+fun SettingsCategoryTitle(title: String, themeColor: Color) {
     Text(
         text = title,
         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
         style = MaterialTheme.typography.labelLarge,
-        color = Color(0xFF2196F3),
+        color = themeColor,
         fontWeight = FontWeight.Bold
     )
 }
@@ -311,37 +314,27 @@ fun PersonalizationSection(
     onToggleLiquidGlass: () -> Unit,
     onToggleDarkMode: () -> Unit
 ) {
+    val availableAccentColors = listOf(
+        Color(0xFF008069),
+        Color(0xFF2196F3),
+        Color(0xFFE91E63),
+        Color(0xFF9C27B0),
+        Color(0xFF607D8B)
+    )
+
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Color de la app", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-
-                val accentColors = listOf(
-                    Color(0xFF008069), Color(0xFF2196F3), Color(0xFFE91E63), Color(0xFF9C27B0), Color(0xFF607D8B),
-                    Color(0xFFFF5722), Color(0xFF4CAF50), Color(0xFFFF9800), Color(0xFF00BCD4), Color(0xFFF44336)
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    accentColors.chunked(5).forEach { rowColors ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            rowColors.forEach { color ->
-                                val isSelected = themeColor.toArgb() == color.toArgb()
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(color)
-                                        .clickable { onColorSelected(color) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isSelected) {
-                                        Text("✓", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
+                Text("Color de app", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                    availableAccentColors.forEach { color ->
+                        val isSelected = themeColor.value.toLong() == color.value.toLong()
+                        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color).clickable { onColorSelected(color) }.let { 
+                            if (isSelected) it.background(color).padding(4.dp).background(if (isDarkMode) Color.Black else Color.White, CircleShape).padding(2.dp).background(color, CircleShape) else it
+                        })
                     }
                 }
 
@@ -416,34 +409,89 @@ fun SkeletonChatItem(isLiquidGlass: Boolean) {
 }
 
 @Composable
-fun ChatItem(chat: Chat, onClick: () -> Unit, isLiquidGlass: Boolean = false) {
+fun ChatItem(
+    chat: Chat,
+    onClick: () -> Unit,
+    isLiquidGlass: Boolean = false,
+    themeColor: Color = Color(0xFF008069)
+) {
     Surface(
-        color = if (isLiquidGlass) MaterialTheme.colorScheme.surface.copy(alpha = 0.3f) else Color.Transparent, 
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp).let { if (isLiquidGlass) it.clip(RoundedCornerShape(12.dp)) else it }, 
-        shadowElevation = if (isLiquidGlass) 1.dp else 0.dp
+        color = if (isLiquidGlass)
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
+        else
+            MaterialTheme.colorScheme.surface,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .let {
+                if (isLiquidGlass) it.padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(12.dp))
+                else it
+            },
+        shadowElevation = 0.dp
     ) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(when (chat.type) { ChatType.INDIVIDUAL -> Color.LightGray; ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f); ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f); ChatType.WORK -> Color(0xFF4CAF50).copy(alpha = 0.6f); ChatType.TOPIC -> Color(0xFF9C27B0).copy(alpha = 0.6f) }), contentAlignment = Alignment.Center) {
-                Text(text = when (chat.type) { ChatType.INDIVIDUAL -> chat.name.take(1); ChatType.GROUP -> "👥"; ChatType.FAMILY -> "🏠"; ChatType.WORK -> "💼"; ChatType.TOPIC -> "💡" }, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Box(
+                modifier = Modifier.size(52.dp).clip(CircleShape).background(
+                    when (chat.type) {
+                        ChatType.INDIVIDUAL -> Color.LightGray
+                        ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f)
+                        ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f)
+                        ChatType.WORK -> Color(0xFF4CAF50).copy(alpha = 0.6f)
+                        ChatType.TOPIC -> Color(0xFF9C27B0).copy(alpha = 0.6f)
+                    }
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when (chat.type) {
+                        ChatType.INDIVIDUAL -> chat.name.take(1)
+                        ChatType.GROUP -> "👥"
+                        ChatType.FAMILY -> "🏠"
+                        ChatType.WORK -> "💼"
+                        ChatType.TOPIC -> "💡"
+                    },
+                    color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = chat.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            text = chat.name, style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold, maxLines = 1,
+                            overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface
+                        )
                         if (chat.type != ChatType.INDIVIDUAL) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Surface(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
-                                Text(text = when (chat.type) { ChatType.GROUP -> "Grupo"; ChatType.FAMILY -> "Familia"; ChatType.WORK -> "Trabajo"; ChatType.TOPIC -> "Temas"; ChatType.INDIVIDUAL -> "" }, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    text = when (chat.type) {
+                                        ChatType.GROUP -> "Grupo"; ChatType.FAMILY -> "Familia"
+                                        ChatType.WORK -> "Trabajo"; ChatType.TOPIC -> "Temas"
+                                        ChatType.INDIVIDUAL -> ""
+                                    },
+                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
-                    Text(text = chat.lastMessageTime, style = MaterialTheme.typography.bodySmall, color = if (chat.unreadCount > 0) Color(0xFF00A884) else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        text = chat.lastMessageTime,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (chat.unreadCount > 0) themeColor else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = chat.lastMessage, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(
+                        text = chat.lastMessage, style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
+                    )
                     if (chat.unreadCount > 0) {
-                        Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(Color(0xFF00A884)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(themeColor), contentAlignment = Alignment.Center) {
                             Text(text = chat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }

@@ -46,6 +46,12 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val replyingTo by viewModel.replyingTo.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
 
+    // Calcula si el color es claro u oscuro para elegir texto negro o blanco
+    val appBarContentColor = remember(themeColor) {
+        val luminance = 0.2126f * themeColor.red + 0.7152f * themeColor.green + 0.0722f * themeColor.blue
+        if (luminance > 0.4f) Color.Black else Color.White
+    }
+
     var showCameraSim by remember { mutableStateOf(false) }
     var showReactionMenuFor by remember { mutableStateOf<String?>(null) }
 
@@ -69,24 +75,26 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     },
                     navigationIcon = {
                         IconButton(onClick = { viewModel.onBackPress() }) {
-                            Text("←", fontSize = 24.sp, color = Color.White)
+                            Text("←", fontSize = 24.sp, color = appBarContentColor)
                         }
                     },
                     actions = {
                         IconButton(onClick = { showCameraSim = true }) {
-                            Text("📹", fontSize = 20.sp, color = Color.White)
+                            Text("📹", fontSize = 20.sp, color = appBarContentColor)
                         }
                         IconButton(onClick = { /* Llamada */ }) {
-                            Text("📞", fontSize = 20.sp, color = Color.White)
+                            Text("📞", fontSize = 20.sp, color = appBarContentColor)
                         }
                         IconButton(onClick = { /* Menú */ }) {
-                            Text("⋮", fontSize = 24.sp, color = Color.White)
+                            Text("⋮", fontSize = 24.sp, color = appBarContentColor)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = if (isLiquidGlassEnabled) themeColor.copy(alpha = 0.8f) else themeColor,
-                        titleContentColor = Color.White,
-                        actionIconContentColor = Color.White
+                        containerColor = themeColor,
+                        scrolledContainerColor = themeColor,
+                        navigationIconContentColor = appBarContentColor,
+                        titleContentColor = appBarContentColor,
+                        actionIconContentColor = appBarContentColor
                     )
                 )
             },
@@ -129,7 +137,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                             .background(
                                 androidx.compose.ui.graphics.Brush.verticalGradient(
                                     colors = listOf(
-                                        themeColor.copy(alpha = if (isDarkMode == true) 0.1f else 0.2f),
+                                        themeColor.copy(alpha = if (isDarkMode == true) 0.18f else 0.3f),
                                         MaterialTheme.colorScheme.background
                                     )
                                 )
@@ -226,21 +234,21 @@ fun ReactionMenu(onDismiss: () -> Unit, onReaction: (String) -> Unit) {
 }
 
 @Composable
-fun ChatHeader(name: String, status: String) {
+fun ChatHeader(name: String, status: String, contentColor: Color = Color.White) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Color.Gray),
+                .background(contentColor.copy(alpha = 0.25f)),
             contentAlignment = Alignment.Center
         ) {
-            Text(name.take(1), color = Color.White, fontWeight = FontWeight.Bold)
+            Text(name.take(1), color = contentColor, fontWeight = FontWeight.Bold)
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text(name, style = MaterialTheme.typography.titleMedium, color = Color.White)
-            Text(status, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.8f))
+            Text(name, style = MaterialTheme.typography.titleMedium, color = contentColor)
+            Text(status, style = MaterialTheme.typography.bodySmall, color = contentColor.copy(alpha = 0.8f))
         }
     }
 }
