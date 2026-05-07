@@ -252,7 +252,7 @@ fun ProfileSection(themeColor: Color) {
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(themeColor), contentAlignment = Alignment.Center) {
-                Text("JD", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text("GD", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column {
@@ -307,10 +307,10 @@ fun SettingsToggleMenuItem(icon: String, title: String, subtitle: String, checke
 
 @Composable
 fun PersonalizationSection(
-    themeColor: Color, 
-    isLiquidGlassEnabled: Boolean, 
+    themeColor: Color,
+    isLiquidGlassEnabled: Boolean,
     isDarkMode: Boolean,
-    onColorSelected: (Color) -> Unit, 
+    onColorSelected: (Color) -> Unit,
     onToggleLiquidGlass: () -> Unit,
     onToggleDarkMode: () -> Unit
 ) {
@@ -324,7 +324,7 @@ fun PersonalizationSection(
 
     Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Card(
-            modifier = Modifier.fillMaxWidth(), 
+            modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -337,6 +337,7 @@ fun PersonalizationSection(
                         })
                     }
                 }
+
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
