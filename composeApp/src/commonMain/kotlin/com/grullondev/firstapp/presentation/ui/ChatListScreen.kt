@@ -23,6 +23,7 @@ import com.grullondev.firstapp.domain.model.Chat
 import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(viewModel: ChatViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
@@ -87,7 +88,7 @@ fun ChatListContent(
     val isDarkModeState by viewModel.isDarkMode.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isDarkMode = isDarkModeState ?: androidx.compose.foundation.isSystemInDarkTheme()
-    
+
     var searchQuery by remember { mutableStateOf("") }
     val filteredChats = if (searchQuery.isEmpty()) chats else {
         chats.filter { it.name.contains(searchQuery, ignoreCase = true) || it.lastMessage.contains(searchQuery, ignoreCase = true) }
@@ -108,14 +109,14 @@ fun ChatListContent(
                     )
             )
         }
-        
+
         Column {
             SearchBarBelowAppBar(
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
                 themeColor = themeColor
             )
-            
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -128,7 +129,7 @@ fun ChatListContent(
                 } else {
                     items(filteredChats, key = { it.id }) { chat ->
                         ChatItem(
-                            chat = chat, 
+                            chat = chat,
                             onClick = { viewModel.onChatSelected(chat.id) },
                             isLiquidGlass = isLiquidGlassEnabled
                         )
