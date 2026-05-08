@@ -14,11 +14,13 @@ import kotlinx.coroutines.flow.update
 class InMemoryChatRepository : ChatRepository {
     private val _chats = MutableStateFlow(
         listOf(
-            Chat("1", "Juan Perez", "¡Qué genial! KMP es muy potente.", "10:05 AM", 0, type = ChatType.INDIVIDUAL),
-            Chat("2", "Maria Garcia", "Hola, ¿cómo vas con la app?", "9:30 AM", 2, type = ChatType.INDIVIDUAL),
+            Chat("1", "Juan Perez", "¡Qué genial! KMP es muy potente.", "10:05 AM", 0, type = ChatType.INDIVIDUAL, isOnline = true, isPinned = true),
+            Chat("2", "Maria Garcia", "Hola, ¿cómo vas con la app?", "9:30 AM", 2, type = ChatType.INDIVIDUAL, isOnline = true, typingStatus = "escribiendo..."),
             Chat("3", "Comunidad KMP", "Nueva versión de Compose disponible", "Ayer", 0, type = ChatType.TOPIC),
-            Chat("4", "Familia Rodriguez", "No olvides comprar pan", "Ayer", 1, type = ChatType.FAMILY),
-            Chat("5", "Proyecto App", "Reunión en 10 minutos para revisar el avance.", "10:10 AM", 0, type = ChatType.WORK)
+            Chat("4", "Familia Rodriguez", "No olvides comprar pan", "Ayer", 1, type = ChatType.FAMILY, isOnline = true, isPinned = true),
+            Chat("5", "Proyecto App", "Reunión en 10 minutos para revisar el avance.", "10:10 AM", 0, type = ChatType.WORK),
+            Chat("6", "Carlos Ruiz", "Foto", "11:20 AM", 0, type = ChatType.INDIVIDUAL, lastMessageType = MessageType.IMAGE),
+            Chat("7", "Ana Lopez", "Audio", "9:15 AM", 1, type = ChatType.INDIVIDUAL, isOnline = true, lastMessageType = MessageType.AUDIO)
         )
     )
 

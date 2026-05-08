@@ -11,5 +11,9 @@ data class Chat(
     val lastMessageTime: String,
     val unreadCount: Int = 0,
     val avatarUrl: String? = null,
-    val type: ChatType = ChatType.INDIVIDUAL
+    val type: ChatType = ChatType.INDIVIDUAL,
+    val isOnline: Boolean = false,
+    val isPinned: Boolean = false,
+    val typingStatus: String? = null,
+    val lastMessageType: MessageType = MessageType.TEXT
 )

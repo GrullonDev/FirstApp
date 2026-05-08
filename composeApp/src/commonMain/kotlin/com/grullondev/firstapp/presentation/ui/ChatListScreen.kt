@@ -1,13 +1,20 @@
 package com.grullondev.firstapp.presentation.ui
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,37 +22,53 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.lazy.LazyRow
 import com.grullondev.firstapp.domain.model.Chat
 import com.grullondev.firstapp.domain.model.ChatType
+import com.grullondev.firstapp.domain.model.MessageType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
+import kotlin.math.absoluteValue
+
+private fun getAvatarColor(name: String): Color {
+    val avatarColors = listOf(
+        Color(0xFFEF5350), Color(0xFFEC407A), Color(0xFFAB47BC), Color(0xFF7E57C2),
+        Color(0xFF5C6BC0), Color(0xFF42A5F5), Color(0xFF29B6F6), Color(0xFF26C6DA),
+        Color(0xFF26A69A), Color(0xFF66BB6A), Color(0xFF9CCC65), Color(0xFFD4E157),
+        Color(0xFFFFEE58), Color(0xFFFFCA28), Color(0xFFFFA726), Color(0xFFFF7043)
+    )
+    return avatarColors[name.hashCode().absoluteValue % avatarColors.size]
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(viewModel: ChatViewModel) {
     val selectedTab by viewModel.selectedTab.collectAsState()
     val themeColor by viewModel.themeColor.collectAsState()
+    
     val tabs = listOf(
-        "Estado" to "⭕",
-        "Llamadas" to "📞",
-        "Chats" to "💬",
-        "Ajustes" to "⚙️"
+        Triple("Llamadas", Icons.Outlined.Call, Icons.Default.Call),
+        Triple("Chats", Icons.Outlined.Chat, Icons.Default.Chat),
+        Triple("Ajustes", Icons.Outlined.Settings, Icons.Default.Settings)
     )
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Clone WhatsApp",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Clone WhatsApp",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = themeColor,
@@ -59,16 +82,33 @@ fun ChatListScreen(viewModel: ChatViewModel) {
                     NavigationBarItem(
                         selected = selectedTab == index,
                         onClick = { viewModel.onTabSelected(index) },
-                        icon = { Text(tab.second) },
+                        icon = { 
+                            Icon(
+                                if (selectedTab == index) tab.third else tab.second,
+                                contentDescription = tab.first
+                            )
+                        },
                         label = { Text(tab.first) },
                         alwaysShowLabel = true
                     )
                 }
             }
+        },
+        floatingActionButton = {
+            if (selectedTab == 1) { // Show on Chats tab (now index 1)
+                FloatingActionButton(
+                    onClick = { /* TODO: New Chat */ },
+                    containerColor = themeColor,
+                    contentColor = Color.White,
+                    shape = CircleShape
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Nuevo Chat")
+                }
+            }
         }
     ) { paddingValues ->
         when (selectedTab) {
-            3 -> Box(modifier = Modifier.padding(paddingValues)) {
+            2 -> Box(modifier = Modifier.padding(paddingValues)) {
                 SettingsTabContent(viewModel)
             }
             else -> ChatListContent(viewModel = viewModel, paddingValues = paddingValues)
@@ -76,6 +116,7 @@ fun ChatListScreen(viewModel: ChatViewModel) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatListContent(
     viewModel: ChatViewModel,
@@ -91,6 +132,16 @@ fun ChatListContent(
     var searchQuery by remember { mutableStateOf("") }
     val filteredChats = if (searchQuery.isEmpty()) chats else {
         chats.filter { it.name.contains(searchQuery, ignoreCase = true) || it.lastMessage.contains(searchQuery, ignoreCase = true) }
+    }
+
+    val pinnedChats = filteredChats.filter { it.isPinned }
+    val unpinnedChats = filteredChats.filter { !it.isPinned }
+    val groupedChats = unpinnedChats.groupBy { chat ->
+        when {
+            chat.lastMessageTime.contains("AM") || chat.lastMessageTime.contains("PM") -> "Hoy"
+            chat.lastMessageTime == "Ayer" -> "Ayer"
+            else -> "Esta semana"
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
@@ -115,38 +166,71 @@ fun ChatListContent(
                 onQueryChange = { searchQuery = it },
                 themeColor = themeColor
             )
-            if (searchQuery.isEmpty()) {
-                val favorites = chats.filter { it.type == ChatType.INDIVIDUAL }.take(5)
-                if (favorites.isNotEmpty()) {
-                    QuickAccessRow(
-                        chats = favorites,
-                        onChatClick = { viewModel.onChatSelected(it) },
-                        themeColor = themeColor
-                    )
-                }
-            }
-
+            
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 8.dp)
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 if (isLoading) {
                     items(8) {
                         SkeletonChatItem(isLiquidGlass = isLiquidGlassEnabled)
                     }
+                } else if (filteredChats.isEmpty()) {
+                    item {
+                        EmptyChatsState(searchQuery, themeColor)
+                    }
                 } else {
-                    items(filteredChats, key = { it.id }) { chat ->
-                        ChatItem(
-                            chat = chat,
-                            onClick = { viewModel.onChatSelected(chat.id) },
-                            isLiquidGlass = isLiquidGlassEnabled,
-                            themeColor = themeColor
-                        )
-                        if (!isLiquidGlassEnabled) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 80.dp, end = 16.dp),
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+                    if (searchQuery.isEmpty()) {
+                        val favorites = chats.filter { it.type == ChatType.INDIVIDUAL }.take(5)
+                        if (favorites.isNotEmpty()) {
+                            item {
+                                QuickAccessRow(
+                                    chats = favorites,
+                                    onChatClick = { viewModel.onChatSelected(it) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Seccion de Chats Fijados
+                    if (pinnedChats.isNotEmpty()) {
+                        stickyHeader {
+                            HeaderSection("Fijados", themeColor)
+                        }
+                        items(pinnedChats, key = { "pinned_${it.id}" }) { chat ->
+                            ChatItem(
+                                chat = chat,
+                                onClick = { viewModel.onChatSelected(chat.id) },
+                                isLiquidGlass = isLiquidGlassEnabled,
+                                themeColor = themeColor,
+                                showPin = true,
+                                modifier = Modifier.animateItem()
                             )
+                        }
+                    }
+
+                    // Secciones por fecha
+                    listOf("Hoy", "Ayer", "Esta semana").forEach { day ->
+                        val dayChats = groupedChats[day]
+                        if (!dayChats.isNullOrEmpty()) {
+                            stickyHeader {
+                                HeaderSection(day, themeColor)
+                            }
+                            items(dayChats, key = { it.id }) { chat ->
+                                ChatItem(
+                                    chat = chat,
+                                    onClick = { viewModel.onChatSelected(chat.id) },
+                                    isLiquidGlass = isLiquidGlassEnabled,
+                                    themeColor = themeColor,
+                                    modifier = Modifier.animateItem()
+                                )
+                                if (!isLiquidGlassEnabled) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = 80.dp, end = 16.dp),
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -156,10 +240,62 @@ fun ChatListContent(
 }
 
 @Composable
+fun EmptyChatsState(searchQuery: String, themeColor: Color) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 100.dp, start = 32.dp, end = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(themeColor.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(if (searchQuery.isEmpty()) "💬" else "🔍", fontSize = 60.sp)
+        }
+        Spacer(modifier = Modifier.height(24.dp))
+        Text(
+            text = if (searchQuery.isEmpty()) "¡Tu bandeja está tranquila!" else "No encontramos nada para \"$searchQuery\"",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = if (searchQuery.isEmpty()) 
+                "Inicia una nueva conversación y conecta con el mundo hoy." 
+            else "Intenta con otras palabras clave o revisa la ortografía.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+fun HeaderSection(title: String, themeColor: Color) {
+    Surface(
+        color = MaterialTheme.colorScheme.background.copy(alpha = 0.95f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            color = themeColor,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
+}
+
+@Composable
 fun QuickAccessRow(
     chats: List<Chat>,
-    onChatClick: (String) -> Unit,
-    themeColor: Color
+    onChatClick: (String) -> Unit
 ) {
     Column(modifier = Modifier.padding(vertical = 4.dp)) {
         Text(
@@ -181,7 +317,7 @@ fun QuickAccessRow(
                         modifier = Modifier
                             .size(54.dp)
                             .clip(CircleShape)
-                            .background(themeColor),
+                            .background(getAvatarColor(chat.name)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -204,6 +340,25 @@ fun QuickAccessRow(
                                     color = Color.White,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        
+                        // Indicador de presencia (punto verde)
+                        if (chat.isOnline) {
+                            Box(
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .align(Alignment.BottomEnd),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF25D366))
                                 )
                             }
                         }
@@ -232,36 +387,35 @@ fun SearchBarBelowAppBar(
     themeColor: Color
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = RoundedCornerShape(24.dp)
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(24.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("🔍", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             TextField(
                 value = query,
                 onValueChange = onQueryChange,
+                placeholder = { Text("Buscar...", style = MaterialTheme.typography.bodyMedium) },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Buscar...", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f), fontSize = 14.sp) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = themeColor,
-                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
+                    disabledIndicatorColor = Color.Transparent
                 ),
                 singleLine = true
             )
-            if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Text("✕", fontSize = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
         }
     }
 }
@@ -269,78 +423,47 @@ fun SearchBarBelowAppBar(
 @Composable
 fun SettingsTabContent(viewModel: ChatViewModel) {
     val themeColor by viewModel.themeColor.collectAsState()
-    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isDarkModeState by viewModel.isDarkMode.collectAsState()
-    val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
-    val privacyLockEnabled by viewModel.privacyLockEnabled.collectAsState()
-    val saveMediaOnMobileData by viewModel.saveMediaOnMobileData.collectAsState()
-    val useCompactFolders by viewModel.useCompactFolders.collectAsState()
-    val selectedLanguage by viewModel.selectedLanguage.collectAsState()
-    val isDarkMode = isDarkModeState ?: androidx.compose.foundation.isSystemInDarkTheme()
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        themeColor.copy(alpha = if (isLiquidGlassEnabled) 0.22f else 0.08f),
-                        MaterialTheme.colorScheme.background
-                    )
-                )
+    val isLiquidGlass by viewModel.isLiquidGlassEnabled.collectAsState()
+    val isDarkMode by viewModel.isDarkMode.collectAsState()
+    
+    LazyColumn(modifier = Modifier.fillMaxSize()) {
+        item { ProfileSection(themeColor) }
+        item { SettingsCategoryTitle("Apariencia", themeColor) }
+        item {
+            PersonalizationSection(
+                themeColor = themeColor,
+                isLiquidGlass = isLiquidGlass,
+                isDarkMode = isDarkMode ?: false,
+                onColorSelected = { viewModel.updateThemeColor(it) },
+                onToggleLiquidGlass = { viewModel.toggleLiquidGlass() },
+                onToggleDarkMode = { viewModel.toggleDarkMode() }
             )
-    ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 16.dp)
-        ) {
-            item { ProfileSection(themeColor = themeColor) }
-            item {
-                SettingsCategoryTitle("Ajustes de chat", themeColor)
-                PersonalizationSection(
-                    themeColor = themeColor,
-                    isLiquidGlassEnabled = isLiquidGlassEnabled,
-                    isDarkMode = isDarkMode,
-                    onColorSelected = { viewModel.updateThemeColor(it) },
-                    onToggleLiquidGlass = { viewModel.toggleLiquidGlass() },
-                    onToggleDarkMode = { viewModel.toggleDarkMode() }
-                )
-            }
-            item {
-                SettingsCategoryTitle("Ajustes", themeColor)
-                SettingsToggleMenuItem("🔔", "Notificaciones y sonidos", if (notificationsEnabled) "Activado" else "Silenciado", notificationsEnabled) { viewModel.toggleNotifications() }
-                SettingsToggleMenuItem("🔐", "Privacidad y seguridad", if (privacyLockEnabled) "Dos pasos, bloqueos" else "Sin bloqueo", privacyLockEnabled) { viewModel.togglePrivacyLock() }
-                SettingsToggleMenuItem("📊", "Datos y almacenamiento", if (saveMediaOnMobileData) "Guardar en datos móviles" else "Solo con Wi‑Fi", saveMediaOnMobileData) { viewModel.toggleSaveMediaOnMobileData() }
-                SettingsToggleMenuItem("📂", "Carpetas de chats", if (useCompactFolders) "Vista compacta" else "Vista completa", useCompactFolders) { viewModel.toggleCompactFolders() }
-                SettingsActionMenuItem("🌐", "Idioma", selectedLanguage) { viewModel.toggleLanguage() }
-            }
-            item {
-                SettingsCategoryTitle("Ayuda", themeColor)
-                SettingsActionMenuItem("❓", "Preguntas frecuentes", "Guía rápida")
-                SettingsActionMenuItem("📧", "Soporte técnico", "Contacto")
-                SettingsActionMenuItem("🌟", "Clone Premium", "Prueba gratis", themeColor)
-            }
         }
+        item { SettingsCategoryTitle("Privacidad", themeColor) }
+        item { SettingsActionMenuItem("Cuenta", "Seguridad, cambiar número", "🔒") {} }
+        item { SettingsActionMenuItem("Privacidad", "Bloqueo de pantalla", "👁️") {} }
+        item { SettingsCategoryTitle("Ayuda", themeColor) }
+        item { SettingsActionMenuItem("Ayuda", "Centro de ayuda, contáctanos", "❓") {} }
+        item { Spacer(modifier = Modifier.height(16.dp)) }
     }
 }
 
 @Composable
 fun ProfileSection(themeColor: Color) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+    Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
-        shape = RoundedCornerShape(16.dp)
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(themeColor), contentAlignment = Alignment.Center) {
-                Text("GD", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text("Jorge Grullón", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Text("+502 1234 5678", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("@jgrullon", style = MaterialTheme.typography.bodySmall, color = themeColor)
-            }
+        Box(
+            modifier = Modifier.size(64.dp).clip(CircleShape).background(themeColor.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("TU", style = MaterialTheme.typography.headlineSmall, color = themeColor, fontWeight = FontWeight.Bold)
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text("Tú (Nombre de Usuario)", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Disponible", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -357,28 +480,27 @@ fun SettingsCategoryTitle(title: String, themeColor: Color) {
 }
 
 @Composable
-fun SettingsActionMenuItem(icon: String, title: String, subtitle: String? = null, themeColor: Color? = null, onClick: () -> Unit = {}) {
-    Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent, onClick = onClick) {
-        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+fun SettingsActionMenuItem(title: String, subtitle: String, icon: String, onClick: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(icon, fontSize = 24.sp)
-            Spacer(modifier = Modifier.width(20.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, color = themeColor ?: MaterialTheme.colorScheme.onSurface)
-                if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("›", fontSize = 24.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
         }
     }
 }
 
 @Composable
-fun SettingsToggleMenuItem(icon: String, title: String, subtitle: String, checked: Boolean, onToggle: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent, onClick = onToggle) {
-        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+fun SettingsToggleMenuItem(title: String, subtitle: String, icon: String, checked: Boolean, onToggle: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(icon, fontSize = 24.sp)
-            Spacer(modifier = Modifier.width(20.dp))
+            Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(title, style = MaterialTheme.typography.titleMedium)
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Switch(checked = checked, onCheckedChange = { onToggle() })
@@ -389,52 +511,42 @@ fun SettingsToggleMenuItem(icon: String, title: String, subtitle: String, checke
 @Composable
 fun PersonalizationSection(
     themeColor: Color,
-    isLiquidGlassEnabled: Boolean,
+    isLiquidGlass: Boolean,
     isDarkMode: Boolean,
     onColorSelected: (Color) -> Unit,
     onToggleLiquidGlass: () -> Unit,
     onToggleDarkMode: () -> Unit
 ) {
-    val availableAccentColors = listOf(
-        Color(0xFF008069),
-        Color(0xFF2196F3),
-        Color(0xFFE91E63),
-        Color(0xFF9C27B0),
-        Color(0xFF607D8B)
-    )
-
-    Column(modifier = Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Card(
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        SettingsToggleMenuItem("Modo Oscuro", "Tema visual de la aplicación", "🌙", isDarkMode, onToggleDarkMode)
+        SettingsToggleMenuItem("Efecto Liquid Glass", "Gradientes y transparencias", "✨", isLiquidGlass, onToggleLiquidGlass)
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Color del Tema", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        val colors = listOf(
+            Color(0xFF008069), Color(0xFF2196F3), Color(0xFFFF9800),
+            Color(0xFF4CAF50), Color(0xFFE91E63), Color(0xFF9C27B0),
+            Color(0xFF795548), Color(0xFF607D8B)
+        )
+        
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Color de app", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                    availableAccentColors.forEach { color ->
-                        val isSelected = themeColor.value.toLong() == color.value.toLong()
-                        Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(color).clickable { onColorSelected(color) }.let { 
-                            if (isSelected) it.background(color).padding(4.dp).background(if (isDarkMode) Color.Black else Color.White, CircleShape).padding(2.dp).background(color, CircleShape) else it
-                        })
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Modo Oscuro", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Cambiar tema de la aplicación", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = isDarkMode, onCheckedChange = { onToggleDarkMode() }, colors = SwitchDefaults.colors(checkedThumbColor = themeColor, checkedTrackColor = themeColor.copy(alpha = 0.5f)))
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Efecto Liquid Glass", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Transparencias inmersivas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = isLiquidGlassEnabled, onCheckedChange = { onToggleLiquidGlass() }, colors = SwitchDefaults.colors(checkedThumbColor = themeColor, checkedTrackColor = themeColor.copy(alpha = 0.5f)))
-                }
+            colors.forEach { color ->
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                        .clickable { onColorSelected(color) }
+                        .let {
+                            if (color == themeColor) it.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape).padding(4.dp)
+                            else it
+                        }
+                )
             }
         }
     }
@@ -452,128 +564,193 @@ fun SkeletonChatItem(isLiquidGlass: Boolean) {
         )
     )
 
-    Surface(
-        color = if (isLiquidGlass) Color.White.copy(alpha = 0.1f * alpha) else Color.Transparent,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .let { if (isLiquidGlass) it.clip(RoundedCornerShape(12.dp)) else it }
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray.copy(alpha = alpha))
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.4f)
-                        .height(14.dp)
-                        .background(Color.LightGray.copy(alpha = alpha), RoundedCornerShape(4.dp))
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.8f)
-                        .height(12.dp)
-                        .background(Color.LightGray.copy(alpha = alpha), RoundedCornerShape(4.dp))
-                )
-            }
+    Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(Color.LightGray.copy(alpha = alpha)))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.fillMaxWidth(0.4f).height(16.dp).background(Color.LightGray.copy(alpha = alpha)))
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(modifier = Modifier.fillMaxWidth(0.8f).height(12.dp).background(Color.LightGray.copy(alpha = alpha)))
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatItem(
     chat: Chat,
     onClick: () -> Unit,
     isLiquidGlass: Boolean = false,
-    themeColor: Color = Color(0xFF008069)
+    themeColor: Color = Color(0xFF008069),
+    showPin: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
-    Surface(
-        color = if (isLiquidGlass)
-            MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-        else
-            MaterialTheme.colorScheme.surface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .let {
-                if (isLiquidGlass) it.padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(12.dp))
-                else it
-            },
-        shadowElevation = 0.dp
-    ) {
-        Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier.size(52.dp).clip(CircleShape).background(
-                    when (chat.type) {
-                        ChatType.INDIVIDUAL -> Color.LightGray
-                        ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f)
-                        ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f)
-                        ChatType.WORK -> Color(0xFF4CAF50).copy(alpha = 0.6f)
-                        ChatType.TOPIC -> Color(0xFF9C27B0).copy(alpha = 0.6f)
-                    }
-                ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = when (chat.type) {
-                        ChatType.INDIVIDUAL -> chat.name.take(1)
-                        ChatType.GROUP -> "👥"
-                        ChatType.FAMILY -> "🏠"
-                        ChatType.WORK -> "💼"
-                        ChatType.TOPIC -> "💡"
-                    },
-                    color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold
-                )
+    val dismissState = rememberSwipeToDismissBoxState()
+    val haptic = LocalHapticFeedback.current
+
+    SwipeToDismissBox(
+        modifier = modifier,
+        state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val color = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF25D366) // Marcar leído
+                SwipeToDismissBoxValue.EndToStart -> Color(0xFF34B7F1) // Archivar
+                else -> Color.Transparent
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+            val icon = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Icons.Default.DoneAll
+                SwipeToDismissBoxValue.EndToStart -> Icons.Default.Archive
+                else -> Icons.Default.Clear
+            }
+            val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(color)
+                    .padding(horizontal = 24.dp),
+                contentAlignment = alignment
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White)
+            }
+        }
+    ) {
+        Surface(
+            color = if (isLiquidGlass)
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
+            else
+                MaterialTheme.colorScheme.surface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { 
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick() 
+                }
+                .let {
+                    if (isLiquidGlass) it.padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(12.dp))
+                    else it
+                },
+            shadowElevation = 0.dp
+        ) {
+            Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier.size(52.dp).clip(CircleShape).background(
+                        if (chat.type == ChatType.INDIVIDUAL) getAvatarColor(chat.name)
+                        else when (chat.type) {
+                            ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f)
+                            ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f)
+                            ChatType.WORK -> Color(0xFF4CAF50).copy(alpha = 0.6f)
+                            ChatType.TOPIC -> Color(0xFF9C27B0).copy(alpha = 0.6f)
+                        }
+                    ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = when (chat.type) {
+                            ChatType.INDIVIDUAL -> chat.name.take(1)
+                            ChatType.GROUP -> "👥"
+                            ChatType.FAMILY -> "🏠"
+                            ChatType.WORK -> "💼"
+                            ChatType.TOPIC -> "💡"
+                        },
+                        color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold
+                    )
+                    
+                    // Indicador de presencia en la lista principal
+                    if (chat.isOnline && chat.type == ChatType.INDIVIDUAL) {
+                        Box(
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surface)
+                                .align(Alignment.BottomEnd),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF25D366))
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = chat.name, style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold, maxLines = 1,
+                                overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (showPin) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(Icons.Default.PushPin, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
+                            }
+                            if (chat.type != ChatType.INDIVIDUAL) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Surface(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+                                    Text(
+                                        text = when (chat.type) {
+                                            ChatType.GROUP -> "Grupo"; ChatType.FAMILY -> "Familia"
+                                            ChatType.WORK -> "Trabajo"; ChatType.TOPIC -> "Temas"
+                                            ChatType.INDIVIDUAL -> ""
+                                        },
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                         Text(
-                            text = chat.name, style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold, maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface
+                            text = chat.lastMessageTime,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (chat.unreadCount > 0) themeColor else MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        if (chat.type != ChatType.INDIVIDUAL) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Surface(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                            if (chat.typingStatus != null) {
                                 Text(
-                                    text = when (chat.type) {
-                                        ChatType.GROUP -> "Grupo"; ChatType.FAMILY -> "Familia"
-                                        ChatType.WORK -> "Trabajo"; ChatType.TOPIC -> "Temas"
-                                        ChatType.INDIVIDUAL -> ""
-                                    },
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    text = chat.typingStatus,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = Color(0xFF25D366),
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                            } else {
+                                // Vista previa de multimedia
+                                when (chat.lastMessageType) {
+                                    MessageType.IMAGE -> {
+                                        Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    MessageType.AUDIO -> {
+                                        Icon(Icons.Default.Mic, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    MessageType.FILE -> {
+                                        Icon(Icons.Default.Description, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.Gray)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+                                    else -> {}
+                                }
+                                Text(
+                                    text = chat.lastMessage, style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
-                    }
-                    Text(
-                        text = chat.lastMessageTime,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (chat.unreadCount > 0) themeColor else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = chat.lastMessage, style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
-                    )
-                    if (chat.unreadCount > 0) {
-                        Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(themeColor), contentAlignment = Alignment.Center) {
-                            Text(text = chat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        if (chat.unreadCount > 0) {
+                            Box(modifier = Modifier.size(22.dp).clip(CircleShape).background(themeColor), contentAlignment = Alignment.Center) {
+                                Text(text = chat.unreadCount.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

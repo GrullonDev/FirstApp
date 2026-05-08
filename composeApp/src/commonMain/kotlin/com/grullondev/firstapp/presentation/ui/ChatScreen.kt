@@ -22,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.*
@@ -46,6 +48,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val replyingTo by viewModel.replyingTo.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
+    val haptic = LocalHapticFeedback.current
 
     // Calcula si el color es claro u oscuro para elegir texto negro o blanco
     val appBarContentColor = remember(themeColor) {
@@ -102,7 +105,10 @@ fun ChatScreen(viewModel: ChatViewModel) {
             bottomBar = {
                 Column(modifier = Modifier.background(Color.Transparent)) {
                     QuickReplyBar(                          // ← AGREGAR
-                        onQuickReply = { viewModel.sendQuickReply(it) },
+                        onQuickReply = { 
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.sendQuickReply(it) 
+                        },
                         themeColor = themeColor
                     )
                     AnimatedVisibility(visible = replyingTo != null) {
@@ -115,11 +121,15 @@ fun ChatScreen(viewModel: ChatViewModel) {
                     ChatInput(
                         text = inputText,
                         onTextChange = { viewModel.onTextChanged(it) },
-                        onSendMessage = { viewModel.sendMessage() },
+                        onSendMessage = { 
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            viewModel.sendMessage() 
+                        },
                         onSendMedia = { type, name -> 
                             if (type == MessageType.IMAGE && name == "camera") {
                                 showCameraSim = true
                             } else {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 viewModel.sendMedia(type, name)
                             }
                         },
