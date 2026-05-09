@@ -41,14 +41,18 @@ import com.grullondev.firstapp.domain.model.MessageType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 import kotlin.math.absoluteValue
 
-private fun getAvatarColor(name: String): Color {
-    val avatarColors = listOf(
-        Color(0xFFEF5350), Color(0xFFEC407A), Color(0xFFAB47BC), Color(0xFF7E57C2),
-        Color(0xFF5C6BC0), Color(0xFF42A5F5), Color(0xFF29B6F6), Color(0xFF26C6DA),
-        Color(0xFF26A69A), Color(0xFF66BB6A), Color(0xFF9CCC65), Color(0xFFD4E157),
-        Color(0xFFFFEE58), Color(0xFFFFCA28), Color(0xFFFFA726), Color(0xFFFF7043)
+private fun avatarColorFromName(name: String): Color {
+    val palette = listOf(
+        Color(0xFF1565C0), // Azul oscuro
+        Color(0xFF2E7D32), // Verde oscuro
+        Color(0xFF6A1B9A), // Morado
+        Color(0xFFC62828), // Rojo
+        Color(0xFF00838F), // Teal
+        Color(0xFF4527A0), // Índigo
+        Color(0xFF558B2F), // Verde oliva
+        Color(0xFFE65100), // Naranja
     )
-    return avatarColors[name.hashCode().absoluteValue % avatarColors.size]
+    return palette[kotlin.math.abs(name.hashCode()) % palette.size]
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,7 +73,12 @@ fun ChatListScreen(viewModel: ChatViewModel) {
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "Clone WhatsApp",
+                            text = when (selectedTab) {
+                                0 -> "Llamadas"
+                                1 -> "Chats"
+                                2 -> "Ajustes"
+                                else -> "Chats"
+                            },
                             color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
@@ -118,7 +127,7 @@ fun ChatListScreen(viewModel: ChatViewModel) {
                         contentColor = Color.White,
                         shape = CircleShape
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Nuevo Chat")
+                        Text("✏️", fontSize = 22.sp)
                     }
                 }
             }
@@ -261,6 +270,31 @@ fun ChatListContent(
                             }
                         }
                     }
+
+                    if (filteredChats.isEmpty() && searchQuery.isNotEmpty()) {
+                        item {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 64.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text("🔍", fontSize = 48.sp)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Sin resultados para",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "\"$searchQuery\"",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -341,7 +375,7 @@ fun ContactProfileScreen(chat: Chat, themeColor: Color, onBack: () -> Unit) {
         ) {
             Spacer(modifier = Modifier.height(24.dp))
             Box(
-                modifier = Modifier.size(120.dp).clip(CircleShape).background(getAvatarColor(chat.name)),
+                modifier = Modifier.size(120.dp).clip(CircleShape).background(avatarColorFromName(chat.name)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(chat.name.take(1), fontSize = 48.sp, color = Color.White, fontWeight = FontWeight.Bold)
@@ -406,7 +440,7 @@ fun QuickAccessRow(
                         modifier = Modifier
                             .size(54.dp)
                             .clip(CircleShape)
-                            .background(getAvatarColor(chat.name)),
+                            .background(avatarColorFromName(chat.name)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -439,17 +473,10 @@ fun QuickAccessRow(
                                 modifier = Modifier
                                     .size(14.dp)
                                     .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.surface)
-                                    .align(Alignment.BottomEnd),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF25D366))
-                                )
-                            }
+                                    .background(Color(0xFF4CAF50))
+                                    .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
+                                    .align(Alignment.BottomEnd)
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -760,7 +787,7 @@ fun ChatItem(
             Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier.size(52.dp).clip(CircleShape).background(
-                        if (chat.type == ChatType.INDIVIDUAL) getAvatarColor(chat.name)
+                        if (chat.type == ChatType.INDIVIDUAL) avatarColorFromName(chat.name)
                         else when (chat.type) {
                             ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f)
                             ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f)

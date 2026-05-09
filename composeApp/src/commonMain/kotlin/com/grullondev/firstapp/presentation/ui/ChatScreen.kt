@@ -1,9 +1,9 @@
 package com.grullondev.firstapp.presentation.ui
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,6 +13,7 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,16 +25,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.text.style.*
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.lazy.LazyRow
 import com.grullondev.firstapp.domain.model.ChatMessage
+import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.domain.model.MessageType
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 import kotlin.math.roundToInt
@@ -57,7 +56,8 @@ fun ChatScreen(viewModel: ChatViewModel) {
     }
 
     var showCameraSim by remember { mutableStateOf(false) }
-    var showCallSim by remember { mutableStateOf(false) }
+    var showInCallScreen by remember { mutableStateOf(false) }
+    var isVideoCall by remember { mutableStateOf(false) }
     var showReactionMenuFor by remember { mutableStateOf<String?>(null) }
 
     if (showCameraSim) {
@@ -69,23 +69,24 @@ fun ChatScreen(viewModel: ChatViewModel) {
             },
             themeColor = themeColor
         )
-    } else if (showCallSim) {
-        CallSimulation(
-            name = selectedChat?.name ?: "Contacto",
-            onClose = { showCallSim = false },
-            themeColor = themeColor
-        )
     } else {
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { 
                         selectedChat?.let { chat ->
+                            val status = when (chat.type) {
+                                ChatType.INDIVIDUAL -> if (chat.typingStatus != null) chat.typingStatus!! else "En línea"
+                                ChatType.GROUP      -> "${chat.name.length % 3 + 2} participantes"
+                                ChatType.FAMILY     -> "5 participantes"
+                                ChatType.WORK       -> "4 participantes"
+                                ChatType.TOPIC      -> "Tema activo"
+                            }
                             ChatHeader(
                                 name = chat.name, 
-                                status = if (chat.typingStatus != null) chat.typingStatus!! else "En línea",
+                                status = status,
                                 onClick = { viewModel.showProfile(chat.id) }
-                            )
+                            ) 
                         }
                     },
                     navigationIcon = {
@@ -97,7 +98,10 @@ fun ChatScreen(viewModel: ChatViewModel) {
                         IconButton(onClick = { showCameraSim = true }) {
                             Text("📹", fontSize = 20.sp, color = appBarContentColor)
                         }
-                        IconButton(onClick = { showCallSim = true }) {
+                        IconButton(onClick = { isVideoCall = true; showInCallScreen = true }) {
+                            Text("📹", fontSize = 20.sp, color = appBarContentColor)
+                        }
+                        IconButton(onClick = { isVideoCall = false; showInCallScreen = true }) {
                             Text("📞", fontSize = 20.sp, color = appBarContentColor)
                         }
                         IconButton(onClick = { /* Menú */ }) {
@@ -115,13 +119,19 @@ fun ChatScreen(viewModel: ChatViewModel) {
             },
             bottomBar = {
                 Column(modifier = Modifier.background(Color.Transparent)) {
-                    QuickReplyBar(                          // ← AGREGAR
-                        onQuickReply = { 
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            viewModel.sendQuickReply(it) 
-                        },
-                        themeColor = themeColor
-                    )
+                    AnimatedVisibility(
+                        visible = inputText.isEmpty(),
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        QuickReplyBar(
+                            onQuickReply = { 
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                viewModel.sendQuickReply(it) 
+                            },
+                            themeColor = themeColor
+                        )
+                    }
                     AnimatedVisibility(visible = replyingTo != null) {
                         ReplyPreview(
                             message = replyingTo,
@@ -197,6 +207,82 @@ fun ChatScreen(viewModel: ChatViewModel) {
                 }
             }
         }
+    }
+
+    if (showInCallScreen) {
+        AlertDialog(
+            onDismissRequest = { showInCallScreen = false },
+            containerColor = Color(0xFF1A1A2E),
+            title = null,
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier.size(90.dp).clip(CircleShape)
+                            .background(themeColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(selectedChat?.name?.take(1) ?: "?",
+                            color = Color.White, fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(selectedChat?.name ?: "", color = Color.White,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold)
+                    Text(if (isVideoCall) "Videollamada..." else "Llamando...",
+                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodyMedium)
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Botón silenciar
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(modifier = Modifier.size(56.dp).clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .clickable { },
+                                contentAlignment = Alignment.Center) {
+                                Text("🔇", fontSize = 22.sp)
+                            }
+                            Text("Silencio", color = Color.White.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(top = 4.dp))
+                        }
+                        // Botón colgar (centro, rojo)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f)) {
+                            Box(modifier = Modifier.size(68.dp).clip(CircleShape)
+                                .background(Color(0xFFE53935))
+                                .clickable { showInCallScreen = false },
+                                contentAlignment = Alignment.Center) {
+                                Text("📵", fontSize = 26.sp)
+                            }
+                            Text("Colgar", color = Color.White.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(top = 4.dp))
+                        }
+                        // Botón altavoz
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(modifier = Modifier.size(56.dp).clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .clickable { },
+                                contentAlignment = Alignment.Center) {
+                                Text("🔊", fontSize = 22.sp)
+                            }
+                            Text("Altavoz", color = Color.White.copy(alpha = 0.7f),
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(top = 4.dp))
+                        }
+                    }
+                }
+            },
+            confirmButton = {}
+        )
     }
 }
 
@@ -562,7 +648,6 @@ fun parseMarkdown(text: String, themeColor: Color): AnnotatedString {
 
 @Composable
 fun MeetingActionCard(isMine: Boolean, themeColor: Color) {
-// ...
     Card(
         modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(0.9f),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)),
@@ -744,69 +829,3 @@ fun MediaOption(icon: String, label: String, onClick: () -> Unit, color: Color) 
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
     }
 }
-
-@Composable
-fun CallSimulation(name: String, onClose: () -> Unit, themeColor: Color) {
-    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF1B2733)) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(modifier = Modifier.height(60.dp))
-                Box(
-                    modifier = Modifier.size(120.dp).clip(CircleShape).background(themeColor.copy(alpha = 0.3f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(name.take(1), fontSize = 48.sp, color = Color.White, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(name, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
-                Text("Llamando...", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
-            }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    CallOptionButton("🔇", "Silenciar")
-                    CallOptionButton("🔊", "Altavoz")
-                    CallOptionButton("📹", "Video")
-                    CallOptionButton("⌨️", "Teclado")
-                }
-                Spacer(modifier = Modifier.height(48.dp))
-                Surface(
-                    modifier = Modifier.size(72.dp),
-                    shape = CircleShape,
-                    color = Color(0xFFE53935),
-                    onClick = onClose
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text("📞", fontSize = 32.sp, color = Color.White, modifier = Modifier.offset(y = 2.dp))
-                    }
-                }
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun CallOptionButton(icon: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            modifier = Modifier.size(56.dp),
-            shape = CircleShape,
-            color = Color.White.copy(alpha = 0.15f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text(icon, fontSize = 24.sp)
-            }
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
-    }
-}
-
