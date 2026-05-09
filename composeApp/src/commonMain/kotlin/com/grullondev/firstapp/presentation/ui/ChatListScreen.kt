@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.grullondev.firstapp.presentation.ui
 
 import androidx.compose.animation.*
@@ -6,12 +8,15 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -95,19 +100,34 @@ fun ChatListScreen(viewModel: ChatViewModel) {
             }
         },
         floatingActionButton = {
-            if (selectedTab == 1) { // Show on Chats tab (now index 1)
-                FloatingActionButton(
-                    onClick = { /* TODO: New Chat */ },
-                    containerColor = themeColor,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Nuevo Chat")
+            when (selectedTab) {
+                0 -> { // Calls tab
+                    FloatingActionButton(
+                        onClick = { /* TODO: New Call */ },
+                        containerColor = themeColor,
+                        contentColor = Color.White,
+                        shape = CircleShape
+                    ) {
+                        Icon(Icons.Default.Call, contentDescription = "Nueva Llamada")
+                    }
+                }
+                1 -> { // Chats tab
+                    FloatingActionButton(
+                        onClick = { /* TODO: New Chat */ },
+                        containerColor = themeColor,
+                        contentColor = Color.White,
+                        shape = CircleShape
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Nuevo Chat")
+                    }
                 }
             }
         }
     ) { paddingValues ->
         when (selectedTab) {
+            0 -> Box(modifier = Modifier.padding(paddingValues)) {
+                CallsScreen(themeColor = themeColor)
+            }
             2 -> Box(modifier = Modifier.padding(paddingValues)) {
                 SettingsTabContent(viewModel)
             }
@@ -127,11 +147,15 @@ fun ChatListContent(
     val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
     val isDarkModeState by viewModel.isDarkMode.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val onlyUnread by viewModel.onlyUnread.collectAsState()
     val isDarkMode = isDarkModeState ?: androidx.compose.foundation.isSystemInDarkTheme()
 
     var searchQuery by remember { mutableStateOf("") }
-    val filteredChats = if (searchQuery.isEmpty()) chats else {
-        chats.filter { it.name.contains(searchQuery, ignoreCase = true) || it.lastMessage.contains(searchQuery, ignoreCase = true) }
+    val filteredChats = chats.filter { 
+        val matchesSearch = it.name.contains(searchQuery, ignoreCase = true) || 
+                          it.lastMessage.contains(searchQuery, ignoreCase = true)
+        val matchesUnread = !onlyUnread || it.unreadCount > 0
+        matchesSearch && matchesUnread
     }
 
     val pinnedChats = filteredChats.filter { it.isPinned }
@@ -164,7 +188,9 @@ fun ChatListContent(
             SearchBarBelowAppBar(
                 query = searchQuery,
                 onQueryChange = { searchQuery = it },
-                themeColor = themeColor
+                themeColor = themeColor,
+                onlyUnread = onlyUnread,
+                onToggleUnread = { viewModel.toggleUnreadFilter() }
             )
             
             LazyColumn(
@@ -201,6 +227,7 @@ fun ChatListContent(
                             ChatItem(
                                 chat = chat,
                                 onClick = { viewModel.onChatSelected(chat.id) },
+                                onLongClick = { viewModel.togglePin(chat.id) },
                                 isLiquidGlass = isLiquidGlassEnabled,
                                 themeColor = themeColor,
                                 showPin = true,
@@ -220,6 +247,7 @@ fun ChatListContent(
                                 ChatItem(
                                     chat = chat,
                                     onClick = { viewModel.onChatSelected(chat.id) },
+                                    onLongClick = { viewModel.togglePin(chat.id) },
                                     isLiquidGlass = isLiquidGlassEnabled,
                                     themeColor = themeColor,
                                     modifier = Modifier.animateItem()
@@ -289,6 +317,67 @@ fun HeaderSection(title: String, themeColor: Color) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
+    }
+}
+
+@Composable
+fun ContactProfileScreen(chat: Chat, themeColor: Color, onBack: () -> Unit) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Info. del contacto", color = Color.White) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = themeColor)
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(24.dp))
+            Box(
+                modifier = Modifier.size(120.dp).clip(CircleShape).background(getAvatarColor(chat.name)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(chat.name.take(1), fontSize = 48.sp, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(chat.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("+1 809 555 0123", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                ProfileActionButton(Icons.Default.Call, "Llamar", themeColor)
+                ProfileActionButton(Icons.Default.VideoCall, "Video", themeColor)
+                ProfileActionButton(Icons.Default.Search, "Buscar", themeColor)
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+            
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                Text("Archivos, enlaces y documentos", style = MaterialTheme.typography.labelLarge, color = themeColor)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    repeat(3) {
+                        Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)).background(Color.LightGray))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileActionButton(icon: ImageVector, label: String, themeColor: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, contentDescription = null, tint = themeColor)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = themeColor)
     }
 }
 
@@ -384,39 +473,66 @@ fun QuickAccessRow(
 fun SearchBarBelowAppBar(
     query: String,
     onQueryChange: (String) -> Unit,
-    themeColor: Color
+    themeColor: Color,
+    onlyUnread: Boolean,
+    onToggleUnread: () -> Unit
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
+    Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(24.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(24.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
         ) {
-            Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            TextField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = { Text("Buscar...", style = MaterialTheme.typography.bodyMedium) },
-                modifier = Modifier.weight(1f),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent
-                ),
-                singleLine = true
-            )
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                TextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    placeholder = { Text("Buscar...", style = MaterialTheme.typography.bodyMedium) },
+                    modifier = Modifier.weight(1f),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
+                    ),
+                    singleLine = true
+                )
+            }
         }
+        Spacer(modifier = Modifier.width(8.dp))
+        FilterChip(
+            selected = onlyUnread,
+            onClick = onToggleUnread,
+            label = { Text("No leídos", fontSize = 12.sp) },
+            leadingIcon = {
+                if (onlyUnread) {
+                    Icon(
+                        imageVector = Icons.Default.FilterList,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = themeColor.copy(alpha = 0.2f),
+                selectedLabelColor = themeColor
+            ),
+            shape = RoundedCornerShape(20.dp)
+        )
     }
 }
 
@@ -575,11 +691,12 @@ fun SkeletonChatItem(isLiquidGlass: Boolean) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ChatItem(
     chat: Chat,
     onClick: () -> Unit,
+    onLongClick: () -> Unit = {},
     isLiquidGlass: Boolean = false,
     themeColor: Color = Color(0xFF008069),
     showPin: Boolean = false,
@@ -589,20 +706,29 @@ fun ChatItem(
     val haptic = LocalHapticFeedback.current
 
     SwipeToDismissBox(
-        modifier = modifier,
+        modifier = modifier.combinedClickable(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            },
+            onLongClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onLongClick()
+            }
+        ),
         state = dismissState,
         enableDismissFromStartToEnd = true,
         enableDismissFromEndToStart = true,
         backgroundContent = {
             val direction = dismissState.dismissDirection
             val color = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Color(0xFF25D366) // Marcar leído
-                SwipeToDismissBoxValue.EndToStart -> Color(0xFF34B7F1) // Archivar
+                SwipeToDismissBoxValue.StartToEnd -> Color(0xFFFFCC00) // Archivar (Amarillo)
+                SwipeToDismissBoxValue.EndToStart -> Color(0xFFFF3B30) // Eliminar (Rojo)
                 else -> Color.Transparent
             }
             val icon = when (direction) {
-                SwipeToDismissBoxValue.StartToEnd -> Icons.Default.DoneAll
-                SwipeToDismissBoxValue.EndToStart -> Icons.Default.Archive
+                SwipeToDismissBoxValue.StartToEnd -> Icons.Default.Archive
+                SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
                 else -> Icons.Default.Clear
             }
             val alignment = if (direction == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd
@@ -625,10 +751,6 @@ fun ChatItem(
                 MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onClick() 
-                }
                 .let {
                     if (isLiquidGlass) it.padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(12.dp))
                     else it
@@ -659,6 +781,24 @@ fun ChatItem(
                         color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold
                     )
                     
+                    if (showPin) {
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surface)
+                                .align(Alignment.TopStart),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.PushPin,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = themeColor
+                            )
+                        }
+                    }
+
                     // Indicador de presencia en la lista principal
                     if (chat.isOnline && chat.type == ChatType.INDIVIDUAL) {
                         Box(
@@ -687,10 +827,6 @@ fun ChatItem(
                                 fontWeight = FontWeight.Bold, maxLines = 1,
                                 overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface
                             )
-                            if (showPin) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(Icons.Default.PushPin, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray)
-                            }
                             if (chat.type != ChatType.INDIVIDUAL) {
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Surface(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)) {

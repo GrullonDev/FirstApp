@@ -10,4 +10,5 @@ interface ChatRepository {
     fun getMessages(chatId: String): Flow<List<ChatMessage>>
     suspend fun sendMessage(chatId: String, text: String, type: MessageType = MessageType.TEXT, fileName: String? = null)
     suspend fun markAllAsRead()
+    suspend fun togglePin(chatId: String)
 }

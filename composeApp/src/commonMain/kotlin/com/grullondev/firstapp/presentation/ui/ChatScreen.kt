@@ -57,6 +57,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
     }
 
     var showCameraSim by remember { mutableStateOf(false) }
+    var showCallSim by remember { mutableStateOf(false) }
     var showReactionMenuFor by remember { mutableStateOf<String?>(null) }
 
     if (showCameraSim) {
@@ -68,13 +69,23 @@ fun ChatScreen(viewModel: ChatViewModel) {
             },
             themeColor = themeColor
         )
+    } else if (showCallSim) {
+        CallSimulation(
+            name = selectedChat?.name ?: "Contacto",
+            onClose = { showCallSim = false },
+            themeColor = themeColor
+        )
     } else {
         Scaffold(
             topBar = {
                 TopAppBar(
                     title = { 
                         selectedChat?.let { chat ->
-                            ChatHeader(name = chat.name, status = "En línea") 
+                            ChatHeader(
+                                name = chat.name, 
+                                status = if (chat.typingStatus != null) chat.typingStatus!! else "En línea",
+                                onClick = { viewModel.showProfile(chat.id) }
+                            )
                         }
                     },
                     navigationIcon = {
@@ -86,7 +97,7 @@ fun ChatScreen(viewModel: ChatViewModel) {
                         IconButton(onClick = { showCameraSim = true }) {
                             Text("📹", fontSize = 20.sp, color = appBarContentColor)
                         }
-                        IconButton(onClick = { /* Llamada */ }) {
+                        IconButton(onClick = { showCallSim = true }) {
                             Text("📞", fontSize = 20.sp, color = appBarContentColor)
                         }
                         IconButton(onClick = { /* Menú */ }) {
@@ -274,8 +285,11 @@ fun ReactionMenu(onDismiss: () -> Unit, onReaction: (String) -> Unit) {
 }
 
 @Composable
-fun ChatHeader(name: String, status: String, contentColor: Color = Color.White) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+fun ChatHeader(name: String, status: String, contentColor: Color = Color.White, onClick: () -> Unit = {}) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.clickable { onClick() }
+    ) {
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -730,3 +744,69 @@ fun MediaOption(icon: String, label: String, onClick: () -> Unit, color: Color) 
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface)
     }
 }
+
+@Composable
+fun CallSimulation(name: String, onClose: () -> Unit, themeColor: Color) {
+    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF1B2733)) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(modifier = Modifier.height(60.dp))
+                Box(
+                    modifier = Modifier.size(120.dp).clip(CircleShape).background(themeColor.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(name.take(1), fontSize = 48.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(name, style = MaterialTheme.typography.headlineMedium, color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Llamando...", style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    CallOptionButton("🔇", "Silenciar")
+                    CallOptionButton("🔊", "Altavoz")
+                    CallOptionButton("📹", "Video")
+                    CallOptionButton("⌨️", "Teclado")
+                }
+                Spacer(modifier = Modifier.height(48.dp))
+                Surface(
+                    modifier = Modifier.size(72.dp),
+                    shape = CircleShape,
+                    color = Color(0xFFE53935),
+                    onClick = onClose
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("📞", fontSize = 32.sp, color = Color.White, modifier = Modifier.offset(y = 2.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun CallOptionButton(icon: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            modifier = Modifier.size(56.dp),
+            shape = CircleShape,
+            color = Color.White.copy(alpha = 0.15f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(icon, fontSize = 24.sp)
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(label, style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+    }
+}
+

@@ -64,6 +64,12 @@ class ChatViewModel(
     private val _calendarEvents = MutableStateFlow<List<CalendarEvent>>(emptyList())
     val calendarEvents: StateFlow<List<CalendarEvent>> = _calendarEvents.asStateFlow()
 
+    private val _onlyUnread = MutableStateFlow(false)
+    val onlyUnread = _onlyUnread.asStateFlow()
+
+    private val _showContactProfile = MutableStateFlow<String?>(null)
+    val showContactProfile = _showContactProfile.asStateFlow()
+
     init {
         _isLoading.value = false
     }
@@ -123,6 +129,20 @@ class ChatViewModel(
     }
 
     fun onBackPress() { _selectedChatId.value = null }
+
+    fun togglePin(chatId: String) {
+        viewModelScope.launch {
+            repository.togglePin(chatId)
+        }
+    }
+
+    fun toggleUnreadFilter() {
+        _onlyUnread.value = !_onlyUnread.value
+    }
+
+    fun showProfile(chatId: String?) {
+        _showContactProfile.value = chatId
+    }
 
     fun markAllAsRead() {
         viewModelScope.launch { repository.markAllAsRead() }

@@ -89,4 +89,12 @@ class InMemoryChatRepository : ChatRepository {
             currentChats.map { it.copy(unreadCount = 0) }
         }
     }
+
+    override suspend fun togglePin(chatId: String) {
+        _chats.update { currentChats ->
+            currentChats.map {
+                if (it.id == chatId) it.copy(isPinned = !it.isPinned) else it
+            }
+        }
+    }
 }
