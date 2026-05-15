@@ -1,21 +1,17 @@
 package com.grullondev.firstapp.presentation.viewmodel
 
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.grullondev.firstapp.domain.model.*
 import com.grullondev.firstapp.domain.repository.ChatRepository
 import com.grullondev.firstapp.domain.repository.PermissionManager
-import com.grullondev.firstapp.domain.repository.SettingsRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class ChatViewModel(
     private val repository: ChatRepository,
-    private val permissionManager: PermissionManager,
-    private val settingsRepository: SettingsRepository
+    private val permissionManager: PermissionManager
 ) : ViewModel() {
 
     val chats: StateFlow<List<Chat>> = repository.getChats()
@@ -35,44 +31,20 @@ class ChatViewModel(
     private val _inputText = MutableStateFlow("")
     val inputText: StateFlow<String> = _inputText.asStateFlow()
 
-    val themeColor: StateFlow<Color> = settingsRepository.getThemeColor()
-        .map { Color(it.toULong()) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, Color(0xFF008069))
-
-    val isLiquidGlassEnabled = settingsRepository.isLiquidGlassEnabled()
-    val isDarkMode = settingsRepository.isDarkMode()
-
     private val _replyingTo = MutableStateFlow<ChatMessage?>(null)
     val replyingTo = _replyingTo.asStateFlow()
 
-    private val _selectedTab = MutableStateFlow(2)
+    private val _selectedTab = MutableStateFlow(1) // Default to Chats tab
     val selectedTab = _selectedTab.asStateFlow()
 
-    private val _isLoading = MutableStateFlow(true)
+    private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
-    private val _notificationsEnabled = MutableStateFlow(true)
-    val notificationsEnabled = _notificationsEnabled.asStateFlow()
-    private val _privacyLockEnabled = MutableStateFlow(true)
-    val privacyLockEnabled = _privacyLockEnabled.asStateFlow()
-    private val _saveMediaOnMobileData = MutableStateFlow(false)
-    val saveMediaOnMobileData = _saveMediaOnMobileData.asStateFlow()
-    private val _useCompactFolders = MutableStateFlow(false)
-    val useCompactFolders = _useCompactFolders.asStateFlow()
-    private val _selectedLanguage = MutableStateFlow("Español")
-    val selectedLanguage = _selectedLanguage.asStateFlow()
-
-    private val _calendarEvents = MutableStateFlow<List<CalendarEvent>>(emptyList())
-    val calendarEvents: StateFlow<List<CalendarEvent>> = _calendarEvents.asStateFlow()
 
     private val _onlyUnread = MutableStateFlow(false)
     val onlyUnread = _onlyUnread.asStateFlow()
 
     private val _showContactProfile = MutableStateFlow<String?>(null)
     val showContactProfile = _showContactProfile.asStateFlow()
-
-    init {
-        _isLoading.value = false
-    }
 
     val selectedChat: StateFlow<Chat?> = combine(chats, _selectedChatId) { chats, id ->
         chats.find { it.id == id }
@@ -82,19 +54,7 @@ class ChatViewModel(
     fun onTextChanged(newText: String) { _inputText.value = newText }
     fun onTabSelected(index: Int) { _selectedTab.value = index }
 
-    fun toggleLiquidGlass() {
-        viewModelScope.launch { settingsRepository.setLiquidGlassEnabled(!isLiquidGlassEnabled.value) }
-    }
-
-    fun toggleDarkMode() {
-        viewModelScope.launch { settingsRepository.setDarkMode(!(isDarkMode.value ?: false)) }
-    }
-
     fun onReplyTo(message: ChatMessage?) { _replyingTo.value = message }
-
-    fun updateThemeColor(color: Color) {
-        viewModelScope.launch { settingsRepository.setThemeColor(color.value.toLong()) }
-    }
 
     fun sendMessage() {
         val chatId = _selectedChatId.value ?: return
@@ -146,21 +106,5 @@ class ChatViewModel(
 
     fun markAllAsRead() {
         viewModelScope.launch { repository.markAllAsRead() }
-    }
-
-    fun toggleNotifications() { _notificationsEnabled.value = !_notificationsEnabled.value }
-    fun togglePrivacyLock() { _privacyLockEnabled.value = !_privacyLockEnabled.value }
-    fun toggleSaveMediaOnMobileData() { _saveMediaOnMobileData.value = !_saveMediaOnMobileData.value }
-    fun toggleCompactFolders() { _useCompactFolders.value = !_useCompactFolders.value }
-    fun toggleLanguage() {
-        _selectedLanguage.value = if (_selectedLanguage.value == "Español") "English" else "Español"
-    }
-
-    fun addCalendarEvent(event: CalendarEvent) {
-        _calendarEvents.value += event
-    }
-
-    fun deleteCalendarEvent(id: String) {
-        _calendarEvents.value = _calendarEvents.value.filter { it.id != id }
     }
 }

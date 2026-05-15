@@ -1,76 +1,36 @@
 package com.grullondev.firstapp
 
 import androidx.compose.animation.*
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.tooling.preview.Preview
-import com.grullondev.firstapp.data.repository.InMemoryChatRepository
-import com.grullondev.firstapp.data.repository.InMemorySettingsRepository
-import com.grullondev.firstapp.data.repository.MockPermissionManager
-import com.grullondev.firstapp.data.repository.PersistentSettingsRepository
-import com.grullondev.firstapp.presentation.ui.CommonBackHandler
-import com.grullondev.firstapp.presentation.ui.ChatListScreen
-import com.grullondev.firstapp.presentation.ui.ChatScreen
-import com.grullondev.firstapp.presentation.ui.ContactProfileScreen
+import com.grullondev.firstapp.presentation.ui.*
+import com.grullondev.firstapp.presentation.ui.theme.AppTheme
+import com.grullondev.firstapp.presentation.viewmodel.CalendarViewModel
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
+import com.grullondev.firstapp.presentation.viewmodel.SettingsViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-@Preview
 fun App() {
-    // En una aplicación real, esto se manejaría con Inyección de Dependencias (ej. Koin)
-    val isPreview = LocalInspectionMode.current
-    val repository = remember { InMemoryChatRepository() }
-    val permissionManager = remember { MockPermissionManager() }
-    val settingsRepository = remember { 
-        if (isPreview) InMemorySettingsRepository() else PersistentSettingsRepository() 
-    }
-    val viewModel = remember { ChatViewModel(repository, permissionManager, settingsRepository) }
+    // ViewModels inyectados mediante Koin
+    val chatViewModel: ChatViewModel = koinViewModel()
+    val settingsViewModel: SettingsViewModel = koinViewModel()
+    val calendarViewModel: CalendarViewModel = koinViewModel()
     
-    val selectedChatId by viewModel.selectedChatId.collectAsState()
-    val showContactProfile by viewModel.showContactProfile.collectAsState()
-    val userDarkModePref by viewModel.isDarkMode.collectAsState()
-    val themeColor by viewModel.themeColor.collectAsState()
-    val chats by viewModel.chats.collectAsState()
-    
-    // Si la preferencia es null (por defecto), seguimos al sistema
-    val isDarkMode = userDarkModePref ?: isSystemInDarkTheme()
+    val selectedChatId by chatViewModel.selectedChatId.collectAsState()
+    val showContactProfile by chatViewModel.showContactProfile.collectAsState()
+    val userDarkModePref by settingsViewModel.isDarkMode.collectAsState()
+    val themeColor by settingsViewModel.themeColor.collectAsState()
+    val chats by chatViewModel.chats.collectAsState()
 
-    val colorScheme = if (isDarkMode) {
-        darkColorScheme(
-            primary = themeColor,
-            onPrimary = Color.White,
-            background = Color(0xFF0F171E),
-            surface = Color(0xFF1B2733),
-            surfaceVariant = Color(0xFF232D36),
-            onSurface = Color.White,
-            onSurfaceVariant = Color.LightGray,
-            tertiaryContainer = themeColor.copy(alpha = 0.3f),
-            secondaryContainer = Color(0xFF232D36),
-            onSecondaryContainer = Color.White
-        )
-    } else {
-        lightColorScheme(
-            primary = themeColor,
-            onPrimary = Color.White,
-            background = Color(0xFFE5DDD5),
-            surface = Color.White,
-            surfaceVariant = Color(0xFFF0F2F5),
-            onSurface = Color.Black,
-            onSurfaceVariant = Color.Gray,
-            tertiaryContainer = themeColor.copy(alpha = 0.2f),
-            secondaryContainer = Color.White,
-            onSecondaryContainer = Color.Black
-        )
-    }
-
-    MaterialTheme(colorScheme = colorScheme) {
+    AppTheme(
+        userDarkModePref = userDarkModePref,
+        themeColor = themeColor
+    ) {
         CommonBackHandler(enabled = selectedChatId != null || showContactProfile != null) {
-            if (showContactProfile != null) viewModel.showProfile(null)
-            else viewModel.onBackPress()
+            if (showContactProfile != null) chatViewModel.showProfile(null)
+            else chatViewModel.onBackPress()
         }
         Surface(color = MaterialTheme.colorScheme.background) {
             Box {
@@ -87,9 +47,16 @@ fun App() {
                     }
                 ) { chatId ->
                     if (chatId == null) {
-                        ChatListScreen(viewModel = viewModel)
+                        ChatListScreen(
+                            chatViewModel = chatViewModel,
+                            settingsViewModel = settingsViewModel,
+                            calendarViewModel = calendarViewModel
+                        )
                     } else {
-                        ChatScreen(viewModel = viewModel)
+                        ChatScreen(
+                            chatViewModel = chatViewModel,
+                            settingsViewModel = settingsViewModel
+                        )
                     }
                 }
 
@@ -105,7 +72,7 @@ fun App() {
                         ContactProfileScreen(
                             chat = chat,
                             themeColor = themeColor,
-                            onBack = { viewModel.showProfile(null) }
+                            onBack = { chatViewModel.showProfile(null) }
                         )
                     }
                 }

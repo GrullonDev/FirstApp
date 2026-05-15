@@ -38,8 +38,9 @@ import androidx.compose.ui.unit.sp
 import com.grullondev.firstapp.domain.model.Chat
 import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.domain.model.MessageType
+import com.grullondev.firstapp.presentation.viewmodel.CalendarViewModel
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
-import kotlin.math.absoluteValue
+import com.grullondev.firstapp.presentation.viewmodel.SettingsViewModel
 
 private fun avatarColorFromName(name: String): Color {
     val palette = listOf(
@@ -57,13 +58,18 @@ private fun avatarColorFromName(name: String): Color {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChatListScreen(viewModel: ChatViewModel) {
-    val selectedTab by viewModel.selectedTab.collectAsState()
-    val themeColor by viewModel.themeColor.collectAsState()
+fun ChatListScreen(
+    chatViewModel: ChatViewModel,
+    settingsViewModel: SettingsViewModel,
+    calendarViewModel: CalendarViewModel
+) {
+    val selectedTab by chatViewModel.selectedTab.collectAsState()
+    val themeColor by settingsViewModel.themeColor.collectAsState()
     
     val tabs = listOf(
         Triple("Llamadas", Icons.Outlined.Call, Icons.Default.Call),
         Triple("Chats", Icons.Outlined.Chat, Icons.Default.Chat),
+        Triple("Calendario", Icons.Outlined.CalendarMonth, Icons.Default.CalendarMonth),
         Triple("Ajustes", Icons.Outlined.Settings, Icons.Default.Settings)
     )
 
@@ -76,7 +82,8 @@ fun ChatListScreen(viewModel: ChatViewModel) {
                             text = when (selectedTab) {
                                 0 -> "Llamadas"
                                 1 -> "Chats"
-                                2 -> "Ajustes"
+                                2 -> "Calendario"
+                                3 -> "Ajustes"
                                 else -> "Chats"
                             },
                             color = Color.White,
@@ -95,7 +102,7 @@ fun ChatListScreen(viewModel: ChatViewModel) {
                 tabs.forEachIndexed { index, tab ->
                     NavigationBarItem(
                         selected = selectedTab == index,
-                        onClick = { viewModel.onTabSelected(index) },
+                        onClick = { chatViewModel.onTabSelected(index) },
                         icon = { 
                             Icon(
                                 if (selectedTab == index) tab.third else tab.second,
@@ -138,9 +145,16 @@ fun ChatListScreen(viewModel: ChatViewModel) {
                 CallsScreen(themeColor = themeColor)
             }
             2 -> Box(modifier = Modifier.padding(paddingValues)) {
-                SettingsTabContent(viewModel)
+                CalendarScreen(viewModel = calendarViewModel, themeColor = themeColor)
             }
-            else -> ChatListContent(viewModel = viewModel, paddingValues = paddingValues)
+            3 -> Box(modifier = Modifier.padding(paddingValues)) {
+                SettingsTabContent(settingsViewModel)
+            }
+            else -> ChatListContent(
+                chatViewModel = chatViewModel,
+                settingsViewModel = settingsViewModel,
+                paddingValues = paddingValues
+            )
         }
     }
 }
@@ -148,15 +162,16 @@ fun ChatListScreen(viewModel: ChatViewModel) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ChatListContent(
-    viewModel: ChatViewModel,
+    chatViewModel: ChatViewModel,
+    settingsViewModel: SettingsViewModel,
     paddingValues: PaddingValues
 ) {
-    val chats by viewModel.chats.collectAsState()
-    val themeColor by viewModel.themeColor.collectAsState()
-    val isLiquidGlassEnabled by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isDarkModeState by viewModel.isDarkMode.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val onlyUnread by viewModel.onlyUnread.collectAsState()
+    val chats by chatViewModel.chats.collectAsState()
+    val themeColor by settingsViewModel.themeColor.collectAsState()
+    val isLiquidGlassEnabled by settingsViewModel.isLiquidGlassEnabled.collectAsState()
+    val isDarkModeState by settingsViewModel.isDarkMode.collectAsState()
+    val isLoading by chatViewModel.isLoading.collectAsState()
+    val onlyUnread by chatViewModel.onlyUnread.collectAsState()
     val isDarkMode = isDarkModeState ?: androidx.compose.foundation.isSystemInDarkTheme()
 
     var searchQuery by remember { mutableStateOf("") }
@@ -199,7 +214,7 @@ fun ChatListContent(
                 onQueryChange = { searchQuery = it },
                 themeColor = themeColor,
                 onlyUnread = onlyUnread,
-                onToggleUnread = { viewModel.toggleUnreadFilter() }
+                onToggleUnread = { chatViewModel.toggleUnreadFilter() }
             )
             
             LazyColumn(
@@ -221,7 +236,7 @@ fun ChatListContent(
                             item {
                                 QuickAccessRow(
                                     chats = favorites,
-                                    onChatClick = { viewModel.onChatSelected(it) }
+                                    onChatClick = { chatViewModel.onChatSelected(it) }
                                 )
                             }
                         }
@@ -235,8 +250,8 @@ fun ChatListContent(
                         items(pinnedChats, key = { "pinned_${it.id}" }) { chat ->
                             ChatItem(
                                 chat = chat,
-                                onClick = { viewModel.onChatSelected(chat.id) },
-                                onLongClick = { viewModel.togglePin(chat.id) },
+                                onClick = { chatViewModel.onChatSelected(chat.id) },
+                                onLongClick = { chatViewModel.togglePin(chat.id) },
                                 isLiquidGlass = isLiquidGlassEnabled,
                                 themeColor = themeColor,
                                 showPin = true,
@@ -255,8 +270,8 @@ fun ChatListContent(
                             items(dayChats, key = { it.id }) { chat ->
                                 ChatItem(
                                     chat = chat,
-                                    onClick = { viewModel.onChatSelected(chat.id) },
-                                    onLongClick = { viewModel.togglePin(chat.id) },
+                                    onClick = { chatViewModel.onChatSelected(chat.id) },
+                                    onLongClick = { chatViewModel.togglePin(chat.id) },
                                     isLiquidGlass = isLiquidGlassEnabled,
                                     themeColor = themeColor,
                                     modifier = Modifier.animateItem()
@@ -267,31 +282,6 @@ fun ChatListContent(
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
                                     )
                                 }
-                            }
-                        }
-                    }
-
-                    if (filteredChats.isEmpty() && searchQuery.isNotEmpty()) {
-                        item {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 64.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text("🔍", fontSize = 48.sp)
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "Sin resultados para",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "\"$searchQuery\"",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
                             }
                         }
                     }
@@ -564,7 +554,7 @@ fun SearchBarBelowAppBar(
 }
 
 @Composable
-fun SettingsTabContent(viewModel: ChatViewModel) {
+fun SettingsTabContent(viewModel: SettingsViewModel) {
     val themeColor by viewModel.themeColor.collectAsState()
     val isLiquidGlass by viewModel.isLiquidGlassEnabled.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
