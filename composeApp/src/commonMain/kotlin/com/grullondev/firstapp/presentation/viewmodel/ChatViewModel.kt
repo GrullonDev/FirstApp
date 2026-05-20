@@ -9,10 +9,24 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+sealed class ChatUiState {
+    data object Loading : ChatUiState()
+    data class Success(val chats: List<Chat>) : ChatUiState()
+    data class Error(val message: String) : ChatUiState()
+}
+
 class ChatViewModel(
     private val repository: ChatRepository,
     private val permissionManager: PermissionManager
 ) : ViewModel() {
+
+    val uiState: StateFlow<ChatUiState> = repository.getChats()
+        .map { chats -> 
+            if (chats.isEmpty()) ChatUiState.Loading 
+            else ChatUiState.Success(chats) 
+        }
+        .catch { emit(ChatUiState.Error(it.message ?: "Error desconocido")) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ChatUiState.Loading)
 
     val chats: StateFlow<List<Chat>> = repository.getChats()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())

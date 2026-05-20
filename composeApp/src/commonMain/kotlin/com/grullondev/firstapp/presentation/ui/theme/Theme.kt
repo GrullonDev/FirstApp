@@ -5,7 +5,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+
+val LocalAvatarPalette = compositionLocalOf {
+    listOf(
+        Color(0xFF1565C0), Color(0xFF2E7D32), Color(0xFF6A1B9A),
+        Color(0xFFC62828), Color(0xFF00838F), Color(0xFF4527A0),
+        Color(0xFF558B2F), Color(0xFFE65100)
+    )
+}
 
 @Composable
 fun AppTheme(
@@ -44,7 +54,30 @@ fun AppTheme(
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
-        content = content
-    )
+        colorScheme = colorScheme
+    ) {
+        CompositionLocalProvider(
+            LocalAvatarPalette provides if (isDarkMode) {
+                listOf(
+                    Color(0xFF90CAF9), Color(0xFFA5D6A7), Color(0xFFCE93D8),
+                    Color(0xFFEF9A9A), Color(0xFF80DEEA), Color(0xFFB39DDB),
+                    Color(0xFFC5E1A5), Color(0xFFFFCC80)
+                )
+            } else {
+                listOf(
+                    Color(0xFF1565C0), Color(0xFF2E7D32), Color(0xFF6A1B9A),
+                    Color(0xFFC62828), Color(0xFF00838F), Color(0xFF4527A0),
+                    Color(0xFF558B2F), Color(0xFFE65100)
+                )
+            }
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+fun avatarColorFromName(name: String): Color {
+    val palette = LocalAvatarPalette.current
+    return palette[kotlin.math.abs(name.hashCode()) % palette.size]
 }

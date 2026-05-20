@@ -13,10 +13,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -27,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -35,34 +32,26 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.grullondev.firstapp.domain.model.Chat
 import com.grullondev.firstapp.domain.model.ChatType
 import com.grullondev.firstapp.domain.model.MessageType
+import com.grullondev.firstapp.presentation.ui.theme.LocalAvatarPalette
+import com.grullondev.firstapp.presentation.ui.theme.avatarColorFromName
 import com.grullondev.firstapp.presentation.viewmodel.CalendarViewModel
+import com.grullondev.firstapp.presentation.viewmodel.ChatUiState
 import com.grullondev.firstapp.presentation.viewmodel.ChatViewModel
 import com.grullondev.firstapp.presentation.viewmodel.SettingsViewModel
-
-private fun avatarColorFromName(name: String): Color {
-    val palette = listOf(
-        Color(0xFF1565C0), // Azul oscuro
-        Color(0xFF2E7D32), // Verde oscuro
-        Color(0xFF6A1B9A), // Morado
-        Color(0xFFC62828), // Rojo
-        Color(0xFF00838F), // Teal
-        Color(0xFF4527A0), // Índigo
-        Color(0xFF558B2F), // Verde oliva
-        Color(0xFFE65100), // Naranja
-    )
-    return palette[kotlin.math.abs(name.hashCode()) % palette.size]
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(
     chatViewModel: ChatViewModel,
     settingsViewModel: SettingsViewModel,
-    calendarViewModel: CalendarViewModel
+    calendarViewModel: CalendarViewModel,
+    navController: NavController
 ) {
+    val uiState by chatViewModel.uiState.collectAsState()
     val selectedTab by chatViewModel.selectedTab.collectAsState()
     val themeColor by settingsViewModel.themeColor.collectAsState()
     
@@ -148,13 +137,33 @@ fun ChatListScreen(
                 CalendarScreen(viewModel = calendarViewModel, themeColor = themeColor)
             }
             3 -> Box(modifier = Modifier.padding(paddingValues)) {
-                SettingsTabContent(settingsViewModel)
+                SettingsScreen(settingsViewModel)
             }
-            else -> ChatListContent(
-                chatViewModel = chatViewModel,
-                settingsViewModel = settingsViewModel,
-                paddingValues = paddingValues
-            )
+            else -> {
+                when (val state = uiState) {
+                    is ChatUiState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                            LazyColumn {
+                                items(8) { SkeletonChatItem() }
+                            }
+                        }
+                    }
+                    is ChatUiState.Success -> {
+                        ChatListContent(
+                            chatViewModel = chatViewModel,
+                            settingsViewModel = settingsViewModel,
+                            paddingValues = paddingValues,
+                            navController = navController,
+                            chats = state.chats
+                        )
+                    }
+                    is ChatUiState.Error -> {
+                        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                            Text("Error: ${state.message}", color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -164,13 +173,13 @@ fun ChatListScreen(
 fun ChatListContent(
     chatViewModel: ChatViewModel,
     settingsViewModel: SettingsViewModel,
-    paddingValues: PaddingValues
+    paddingValues: PaddingValues,
+    navController: NavController,
+    chats: List<Chat>
 ) {
-    val chats by chatViewModel.chats.collectAsState()
     val themeColor by settingsViewModel.themeColor.collectAsState()
     val isLiquidGlassEnabled by settingsViewModel.isLiquidGlassEnabled.collectAsState()
     val isDarkModeState by settingsViewModel.isDarkMode.collectAsState()
-    val isLoading by chatViewModel.isLoading.collectAsState()
     val onlyUnread by chatViewModel.onlyUnread.collectAsState()
     val isDarkMode = isDarkModeState ?: androidx.compose.foundation.isSystemInDarkTheme()
 
@@ -221,11 +230,7 @@ fun ChatListContent(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                if (isLoading) {
-                    items(8) {
-                        SkeletonChatItem(isLiquidGlass = isLiquidGlassEnabled)
-                    }
-                } else if (filteredChats.isEmpty()) {
+                if (filteredChats.isEmpty()) {
                     item {
                         EmptyChatsState(searchQuery, themeColor)
                     }
@@ -236,7 +241,9 @@ fun ChatListContent(
                             item {
                                 QuickAccessRow(
                                     chats = favorites,
-                                    onChatClick = { chatViewModel.onChatSelected(it) }
+                                    onChatClick = { chatId -> 
+                                        navController.navigate("chat_detail/$chatId")
+                                    }
                                 )
                             }
                         }
@@ -250,7 +257,7 @@ fun ChatListContent(
                         items(pinnedChats, key = { "pinned_${it.id}" }) { chat ->
                             ChatItem(
                                 chat = chat,
-                                onClick = { chatViewModel.onChatSelected(chat.id) },
+                                onClick = { navController.navigate("chat_detail/${chat.id}") },
                                 onLongClick = { chatViewModel.togglePin(chat.id) },
                                 isLiquidGlass = isLiquidGlassEnabled,
                                 themeColor = themeColor,
@@ -270,7 +277,7 @@ fun ChatListContent(
                             items(dayChats, key = { it.id }) { chat ->
                                 ChatItem(
                                     chat = chat,
-                                    onClick = { chatViewModel.onChatSelected(chat.id) },
+                                    onClick = { navController.navigate("chat_detail/${chat.id}") },
                                     onLongClick = { chatViewModel.togglePin(chat.id) },
                                     isLiquidGlass = isLiquidGlassEnabled,
                                     themeColor = themeColor,
@@ -341,67 +348,6 @@ fun HeaderSection(title: String, themeColor: Color) {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
-    }
-}
-
-@Composable
-fun ContactProfileScreen(chat: Chat, themeColor: Color, onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Info. del contacto", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null, tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = themeColor)
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Box(
-                modifier = Modifier.size(120.dp).clip(CircleShape).background(avatarColorFromName(chat.name)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(chat.name.take(1), fontSize = 48.sp, color = Color.White, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(chat.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("+1 809 555 0123", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                ProfileActionButton(Icons.Default.Call, "Llamar", themeColor)
-                ProfileActionButton(Icons.Default.VideoCall, "Video", themeColor)
-                ProfileActionButton(Icons.Default.Search, "Buscar", themeColor)
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
-            
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Text("Archivos, enlaces y documentos", style = MaterialTheme.typography.labelLarge, color = themeColor)
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    repeat(3) {
-                        Box(modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)).background(Color.LightGray))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ProfileActionButton(icon: ImageVector, label: String, themeColor: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = null, tint = themeColor)
-        Text(label, style = MaterialTheme.typography.labelSmall, color = themeColor)
     }
 }
 
@@ -554,156 +500,34 @@ fun SearchBarBelowAppBar(
 }
 
 @Composable
-fun SettingsTabContent(viewModel: SettingsViewModel) {
-    val themeColor by viewModel.themeColor.collectAsState()
-    val isLiquidGlass by viewModel.isLiquidGlassEnabled.collectAsState()
-    val isDarkMode by viewModel.isDarkMode.collectAsState()
-    
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item { ProfileSection(themeColor) }
-        item { SettingsCategoryTitle("Apariencia", themeColor) }
-        item {
-            PersonalizationSection(
-                themeColor = themeColor,
-                isLiquidGlass = isLiquidGlass,
-                isDarkMode = isDarkMode ?: false,
-                onColorSelected = { viewModel.updateThemeColor(it) },
-                onToggleLiquidGlass = { viewModel.toggleLiquidGlass() },
-                onToggleDarkMode = { viewModel.toggleDarkMode() }
-            )
-        }
-        item { SettingsCategoryTitle("Privacidad", themeColor) }
-        item { SettingsActionMenuItem("Cuenta", "Seguridad, cambiar número", "🔒") {} }
-        item { SettingsActionMenuItem("Privacidad", "Bloqueo de pantalla", "👁️") {} }
-        item { SettingsCategoryTitle("Ayuda", themeColor) }
-        item { SettingsActionMenuItem("Ayuda", "Centro de ayuda, contáctanos", "❓") {} }
-        item { Spacer(modifier = Modifier.height(16.dp)) }
-    }
-}
-
-@Composable
-fun ProfileSection(themeColor: Color) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier.size(64.dp).clip(CircleShape).background(themeColor.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("TU", style = MaterialTheme.typography.headlineSmall, color = themeColor, fontWeight = FontWeight.Bold)
-        }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column {
-            Text("Tú (Nombre de Usuario)", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text("Disponible", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-fun SettingsCategoryTitle(title: String, themeColor: Color) {
-    Text(
-        text = title,
-        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
-        style = MaterialTheme.typography.labelLarge,
-        color = themeColor,
-        fontWeight = FontWeight.Bold
-    )
-}
-
-@Composable
-fun SettingsActionMenuItem(title: String, subtitle: String, icon: String, onClick: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(icon, fontSize = 24.sp)
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-@Composable
-fun SettingsToggleMenuItem(title: String, subtitle: String, icon: String, checked: Boolean, onToggle: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth()) {
-        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(icon, fontSize = 24.sp)
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Switch(checked = checked, onCheckedChange = { onToggle() })
-        }
-    }
-}
-
-@Composable
-fun PersonalizationSection(
-    themeColor: Color,
-    isLiquidGlass: Boolean,
-    isDarkMode: Boolean,
-    onColorSelected: (Color) -> Unit,
-    onToggleLiquidGlass: () -> Unit,
-    onToggleDarkMode: () -> Unit
-) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        SettingsToggleMenuItem("Modo Oscuro", "Tema visual de la aplicación", "🌙", isDarkMode, onToggleDarkMode)
-        SettingsToggleMenuItem("Efecto Liquid Glass", "Gradientes y transparencias", "✨", isLiquidGlass, onToggleLiquidGlass)
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("Color del Tema", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        val colors = listOf(
-            Color(0xFF008069), Color(0xFF2196F3), Color(0xFFFF9800),
-            Color(0xFF4CAF50), Color(0xFFE91E63), Color(0xFF9C27B0),
-            Color(0xFF795548), Color(0xFF607D8B)
-        )
-        
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            colors.forEach { color ->
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .clickable { onColorSelected(color) }
-                        .let {
-                            if (color == themeColor) it.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape).padding(4.dp)
-                            else it
-                        }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SkeletonChatItem(isLiquidGlass: Boolean) {
+fun SkeletonChatItem() {
     val infiniteTransition = rememberInfiniteTransition()
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.7f,
+    val xOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1000),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
         )
+    )
+
+    val shimmerBrush = Brush.linearGradient(
+        colors = listOf(
+            Color.LightGray.copy(alpha = 0.6f),
+            Color.LightGray.copy(alpha = 0.2f),
+            Color.LightGray.copy(alpha = 0.6f),
+        ),
+        start = androidx.compose.ui.geometry.Offset(xOffset - 200f, 0f),
+        end = androidx.compose.ui.geometry.Offset(xOffset, 0f)
     )
 
     Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(Color.LightGray.copy(alpha = alpha)))
+        Box(modifier = Modifier.size(52.dp).clip(CircleShape).background(shimmerBrush))
         Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Box(modifier = Modifier.fillMaxWidth(0.4f).height(16.dp).background(Color.LightGray.copy(alpha = alpha)))
+            Box(modifier = Modifier.fillMaxWidth(0.4f).height(16.dp).background(shimmerBrush))
             Spacer(modifier = Modifier.height(8.dp))
-            Box(modifier = Modifier.fillMaxWidth(0.8f).height(12.dp).background(Color.LightGray.copy(alpha = alpha)))
+            Box(modifier = Modifier.fillMaxWidth(0.8f).height(12.dp).background(shimmerBrush))
         }
     }
 }
@@ -777,8 +601,8 @@ fun ChatItem(
             Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier.size(52.dp).clip(CircleShape).background(
-                        if (chat.type == ChatType.INDIVIDUAL) avatarColorFromName(chat.name)
-                        else when (chat.type) {
+                        when (chat.type) {
+                            ChatType.INDIVIDUAL -> avatarColorFromName(chat.name)
                             ChatType.GROUP -> Color(0xFF2196F3).copy(alpha = 0.6f)
                             ChatType.FAMILY -> Color(0xFFFF9800).copy(alpha = 0.6f)
                             ChatType.WORK -> Color(0xFF4CAF50).copy(alpha = 0.6f)
@@ -868,9 +692,10 @@ fun ChatItem(
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                            if (chat.typingStatus != null) {
+                            val typingStatus = chat.typingStatus
+                            if (typingStatus != null) {
                                 Text(
-                                    text = chat.typingStatus,
+                                    text = typingStatus,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color(0xFF25D366),
                                     fontWeight = FontWeight.Bold,

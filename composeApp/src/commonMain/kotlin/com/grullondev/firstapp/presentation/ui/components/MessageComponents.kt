@@ -87,9 +87,10 @@ fun MessageBubble(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalAlignment = Alignment.End
                 ) {
-                    if (!message.isMine && message.senderName != null) {
+                    val senderName = message.senderName
+                    if (!message.isMine && senderName != null) {
                         Text(
-                            text = message.senderName,
+                            text = senderName,
                             style = MaterialTheme.typography.labelSmall,
                             color = themeColor,
                             fontWeight = FontWeight.Bold,
